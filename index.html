@@ -146,7 +146,7 @@ const DROPBOX_UPLOAD_FN = SUPABASE_URL + "/functions/v1/dropbox-upload";
 const EMAIL_FN = SUPABASE_URL + "/functions/v1/send-entry-email";
 
 const CATEGORIES   = ["Solo","Duet","Trios & Quartets","Group","International Solo","International Group"];
-const STYLES       = ["Ballet","Character","Contemporary","Lyrical","Commercial","Street","Jazz","Modern","Acro","Tap","Musical Theatre","Latin & Ballroom"];
+const STYLES       = ["Ballet","Character","Contemporary","Lyrical","Commercial & Street","Jazz","Modern","Acro","Tap","Musical Theatre","Latin & Ballroom"];
 const ROUTE_TYPES  = ["Solo","Duet","Trios & Quartets","Group","International Solo","International Group"];   // types used for judge routing
 
 // Judges score each entry on four criteria, each out of 25 (total 100).
@@ -229,7 +229,7 @@ function makeDemoDB(){
   const users=[
     {id:'j1',email:'judge@demo.com',pw:'demo123',name:'Sophie Laurent',role:'judge',assigned_styles:[]},
     {id:'j2',email:'judge2@demo.com',pw:'demo123',name:'Anna Morgan',role:'judge',assigned_styles:['Ballet|Solo','Ballet|Group','Character|Solo','Character|Group','Contemporary|Solo']},
-    {id:'j3',email:'marlon@demo.com',pw:'demo123',name:'Swoosh',role:'judge',assigned_styles:['Commercial|Solo','Commercial|Duet','Commercial|Trios & Quartets','Commercial|Group','Street|Solo','Street|Duet','Street|Trios & Quartets','Street|Group']},
+    {id:'j3',email:'marlon@demo.com',pw:'demo123',name:'Swoosh',role:'judge',assigned_styles:['Commercial & Street|Solo','Commercial & Street|Duet','Commercial & Street|Trios & Quartets','Commercial & Street|Group']},
     {id:'a1',email:'admin@demo.com',pw:'demo123',name:'Christine Michaels',role:'admin',assigned_styles:[]},
   ];
   let session=null;
@@ -240,7 +240,7 @@ function makeDemoDB(){
   ];
   const entries=[
     {id:'e1',created_at:Date.now()-86400000*3,dancer_name:'Isla Thompson',school_name:'Starlight Dance Academy',category:'Solo',dance_style:'Contemporary',date_of_birth:'2010-05-14',email:'isla@example.com',phone:'07700 900123',video_url:'https://www.dropbox.com/s/demo/sample1.mp4?dl=0',payment_status:'paid',entry_fee:10},
-    {id:'e2',created_at:Date.now()-86400000*2,dancer_name:'Eastside Crew',school_name:'Eastside Studios',category:'Group',dance_style:'Street',date_of_birth:'2013-02-03',email:'east@example.com',phone:'07700 900456',video_url:'https://www.dropbox.com/s/demo/sample2.mp4?dl=0',payment_status:'paid',entry_fee:25},
+    {id:'e2',created_at:Date.now()-86400000*2,dancer_name:'Eastside Crew',school_name:'Eastside Studios',category:'Group',dance_style:'Commercial & Street',date_of_birth:'2013-02-03',email:'east@example.com',phone:'07700 900456',video_url:'https://www.dropbox.com/s/demo/sample2.mp4?dl=0',payment_status:'paid',entry_fee:25},
     {id:'e3',created_at:Date.now()-86400000,dancer_name:'Grace & Mia',school_name:'Pirouette School of Dance',category:'Duet',dance_style:'Ballet',date_of_birth:'2016-09-22',email:'grace@example.com',phone:'07700 900789',video_url:'https://www.dropbox.com/s/demo/sample3.mp4?dl=0',payment_status:'paid',entry_fee:14},
     {id:'e4',created_at:Date.now()-3600000,dancer_name:'Leo Bennett',school_name:'Rhythm & Co',category:'Solo',dance_style:'Tap',date_of_birth:'2008-11-30',email:'leo@example.com',phone:'07700 900222',video_url:'https://www.dropbox.com/s/demo/sample4.mp4?dl=0',payment_status:'unpaid',entry_fee:10},
   ];
