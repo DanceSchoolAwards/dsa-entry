@@ -635,21 +635,24 @@ async function renderJudge(){
       <select id="styleFilter" style="max-width:220px">${styleOptions}</select>
     </div>
     <div class="toolbar" style="margin:10px 0 0;flex-wrap:wrap;gap:8px">
-      <select id="jCat"><option value="">All categories</option>${CATEGORIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select>
-      <select id="jScout"><option value="">Scout pass: any</option><option value="yes">⭐ Has scout pass</option><option value="no">No scout pass</option></select>
-      <select id="jPerform"><option value="">Performing: any</option><option value="yes">🎭 Selected to perform</option><option value="no">Not selected</option></select>
+      <select id="judgeFilter" style="max-width:260px">
+        <option value="">Filter by…</option>
+        <optgroup label="Category">${CATEGORIES.map(c=>`<option value="cat:${esc(c)}">${esc(c)}</option>`).join('')}</optgroup>
+        <optgroup label="Other">
+          <option value="scout">⭐ Has scout pass</option>
+          <option value="perform">🎭 Selected to perform</option>
+        </optgroup>
+      </select>
     </div>
     <div id="judgeList" style="margin-top:18px"></div>
   </div>`;
 
-  let curTab='todo', curStyle='__all', curCat='', curScout='', curPerform='';
+  let curTab='todo', curStyle='__all', jF='';
   function matchFilters(e){
     if(curStyle!=='__all' && groupOf(e)!==curStyle) return false;
-    if(curCat && e.category!==curCat) return false;
-    if(curScout==='yes' && !e.scout_pass_judge_id) return false;
-    if(curScout==='no' && e.scout_pass_judge_id) return false;
-    if(curPerform==='yes' && !e.selected_to_perform) return false;
-    if(curPerform==='no' && e.selected_to_perform) return false;
+    if(jF.startsWith('cat:') && e.category!==jF.slice(4)) return false;
+    if(jF==='scout' && !e.scout_pass_judge_id) return false;
+    if(jF==='perform' && !e.selected_to_perform) return false;
     return true;
   }
 
@@ -749,9 +752,7 @@ async function renderJudge(){
     t.classList.add('active'); curTab=t.getAttribute('data-tab'); paint();
   });
   $('#styleFilter').onchange=e=>{ curStyle=e.target.value; paint(); };
-  $('#jCat').onchange=e=>{ curCat=e.target.value; paint(); };
-  $('#jScout').onchange=e=>{ curScout=e.target.value; paint(); };
-  $('#jPerform').onchange=e=>{ curPerform=e.target.value; paint(); };
+  $('#judgeFilter').onchange=e=>{ jF=e.target.value; paint(); };
   $('#judgeNotices').onclick=()=>renderNoticeBoard();
   paint();
 }
@@ -782,11 +783,15 @@ async function renderAdmin(){
       <button class="btn ghost sm" id="exportBtn" style="margin-left:auto">Export CSV</button>
     </div>
     <div class="toolbar" style="margin-top:8px;flex-wrap:wrap;gap:8px">
-      <select id="fCat"><option value="">All categories</option>${CATEGORIES.map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select>
-      <select id="fStyle"><option value="">All styles</option>${STYLES.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join('')}</select>
-      <select id="fScout"><option value="">Scout pass: any</option><option value="yes">⭐ Has scout pass</option><option value="no">No scout pass</option></select>
-      <select id="fPerform"><option value="">Performing: any</option><option value="yes">🎭 Selected to perform</option><option value="no">Not selected</option></select>
-      <button class="btn ghost sm" id="clearFilters">Clear filters</button>
+      <select id="adminFilter" style="max-width:260px">
+        <option value="">Filter by…</option>
+        <optgroup label="Category">${CATEGORIES.map(c=>`<option value="cat:${esc(c)}">${esc(c)}</option>`).join('')}</optgroup>
+        <optgroup label="Dance style">${STYLES.map(s=>`<option value="style:${esc(s)}">${esc(s)}</option>`).join('')}</optgroup>
+        <optgroup label="Other">
+          <option value="scout">⭐ Has scout pass</option>
+          <option value="perform">🎭 Selected to perform</option>
+        </optgroup>
+      </select>
     </div>
     <div style="overflow-x:auto">
     <table id="resTable">
@@ -798,18 +803,16 @@ async function renderAdmin(){
     </table></div>
   </div>`;
 
-  let filter='paid', q='', catF='', styleF='', scoutF='', performF='';
+  let filter='paid', q='', F='';
   function paint(){
     const tb=$('#resTable tbody');
     const data=rows.filter(r=>{
       if(filter!=='all'&&r.payment_status!==filter) return false;
       if(q&&!(`${r.dancer_name} ${r.school_name||''}`.toLowerCase().includes(q))) return false;
-      if(catF&&r.category!==catF) return false;
-      if(styleF&&r.dance_style!==styleF) return false;
-      if(scoutF==='yes'&&!r.scout_pass_judge_id) return false;
-      if(scoutF==='no'&&r.scout_pass_judge_id) return false;
-      if(performF==='yes'&&!r.selected_to_perform) return false;
-      if(performF==='no'&&r.selected_to_perform) return false;
+      if(F.startsWith('cat:')&&r.category!==F.slice(4)) return false;
+      if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
+      if(F==='scout'&&!r.scout_pass_judge_id) return false;
+      if(F==='perform'&&!r.selected_to_perform) return false;
       return true;
     });
     tb.innerHTML=data.map(r=>{
@@ -830,11 +833,7 @@ async function renderAdmin(){
     tb.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>renderAdminEntry(rows.find(x=>x.id===b.getAttribute('data-view'))));
   }
   $('#search').oninput=e=>{q=e.target.value.toLowerCase();paint();};
-  $('#fCat').onchange=e=>{catF=e.target.value;paint();};
-  $('#fStyle').onchange=e=>{styleF=e.target.value;paint();};
-  $('#fScout').onchange=e=>{scoutF=e.target.value;paint();};
-  $('#fPerform').onchange=e=>{performF=e.target.value;paint();};
-  $('#clearFilters').onclick=()=>{ catF=styleF=scoutF=performF=''; $('#fCat').value='';$('#fStyle').value='';$('#fScout').value='';$('#fPerform').value=''; paint(); };
+  $('#adminFilter').onchange=e=>{F=e.target.value;paint();};
   app.querySelectorAll('[data-f]').forEach(t=>t.onclick=()=>{
     app.querySelectorAll('[data-f]').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); filter=t.getAttribute('data-f'); paint();
