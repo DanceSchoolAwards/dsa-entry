@@ -840,10 +840,11 @@ async function renderAdmin(){
     t.classList.add('active'); filter=t.getAttribute('data-f'); paint();
   });
   $('#exportBtn').onclick=()=>{
-    const head=['Dancer','School','Category','Style','DOB','Payment','AvgScore','JudgesScored','PerformNoms'];
+    const head=['Dancer','School','Email','Phone','Category','Style','DOB','Payment','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
     const lines=[head.join(',')].concat(rows.map(r=>[
-      r.dancer_name,r.school_name,r.category,r.dance_style,r.date_of_birth,
-      r.payment_status,r.avg_total!=null?r.avg_total:'',r.num_scores||0,r.votes_perform||0
+      r.dancer_name,r.school_name,r.email,r.phone,r.category,r.dance_style,r.date_of_birth,
+      r.payment_status,r.scout_pass_judge_name||'',r.selected_to_perform?'Yes':'',
+      r.avg_total!=null?r.avg_total:'',r.num_scores||0,r.votes_perform||0
     ].map(v=>`"${(v==null?'':v).toString().replace(/"/g,'""')}"`).join(',')));
     const blob=new Blob([lines.join('\n')],{type:'text/csv'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
