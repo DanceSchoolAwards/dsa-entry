@@ -390,12 +390,13 @@ async function refreshUser(){ state.user=await db.currentUser(); renderWho(); }
 
 function renderWho(){
   const bar=$('#whoBar');
+  const homeLink=`<a class="btn link" href="https://www.thedanceschoolawards.com/" style="text-decoration:none">Home</a>`;
   if(state.user){
-    bar.innerHTML=`<span><b>${esc(state.user.name)}</b> · ${state.user.role}</span>
+    bar.innerHTML=`${homeLink}<span><b>${esc(state.user.name)}</b> · ${state.user.role}</span>
       <button class="btn link" id="logoutBtn">Log out</button>`;
     $('#logoutBtn').onclick=async()=>{await db.signOut();await refreshUser();go('home');};
   } else {
-    bar.innerHTML=`<button class="btn link" id="navEnter">Enter</button>
+    bar.innerHTML=`${homeLink}<button class="btn link" id="navEnter">Enter</button>
       <button class="btn link" id="navLogin">Judge / Admin</button>`;
     $('#navEnter').onclick=()=>go('enter');
     $('#navLogin').onclick=()=>go('login');
