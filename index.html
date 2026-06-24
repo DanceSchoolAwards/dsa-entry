@@ -142,6 +142,7 @@ function priceFor(category){ return feeAndCode(category).fee; }
 function payUrlFor(category){ return PAYLINK_BASE + feeAndCode(category).code; }
 
 // Secure Dropbox upload connector (a free Supabase Edge Function).
+const NOTIFY_FN = SUPABASE_URL + "/functions/v1/notify-entry";
 const DROPBOX_UPLOAD_FN = SUPABASE_URL + "/functions/v1/dropbox-upload";
 // Brevo confirmation-email connector.
 const EMAIL_FN = SUPABASE_URL + "/functions/v1/send-entry-email";
@@ -789,6 +790,13 @@ async function renderAdmin(){
         <option value="">Filter by…</option>
         <optgroup label="Category">${CATEGORIES.map(c=>`<option value="cat:${esc(c)}">${esc(c)}</option>`).join('')}</optgroup>
         <optgroup label="Dance style">${STYLES.map(s=>`<option value="style:${esc(s)}">${esc(s)}</option>`).join('')}</optgroup>
+        <optgroup label="Entry date">
+          <option value="sort:new">Newest first</option>
+          <option value="sort:old">Oldest first</option>
+          <option value="date:today">Entered today</option>
+          <option value="date:7">Entered in last 7 days</option>
+          <option value="date:30">Entered in last 30 days</option>
+        </optgroup>
         <optgroup label="Other">
           <option value="scout">⭐ Has scout pass</option>
           <option value="perform">🎭 Selected to perform</option>
@@ -798,7 +806,7 @@ async function renderAdmin(){
     <div style="overflow-x:auto">
     <table id="resTable">
       <thead><tr>
-        <th>Dancer / group</th><th>Category</th><th>Style</th><th>DOB</th>
+        <th>Dancer / group</th><th>Category</th><th>Style</th><th>DOB</th><th>Entered</th>
         <th>Payment</th><th>Avg score</th><th>Judges</th><th>Perform</th><th></th>
       </tr></thead>
       <tbody></tbody>
@@ -815,22 +823,32 @@ async function renderAdmin(){
       if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
       if(F==='scout'&&!r.scout_pass_judge_id) return false;
       if(F==='perform'&&!r.selected_to_perform) return false;
+      if(F.startsWith('date:')){
+        const t=r.created_at?new Date(r.created_at).getTime():0;
+        if(!t) return false;
+        const arg=F.slice(5);
+        if(arg==='today'){ const d=new Date(); d.setHours(0,0,0,0); if(t<d.getTime()) return false; }
+        else { const days=Number(arg); if(Date.now()-t > days*86400000) return false; }
+      }
       return true;
     });
+    if(F==='sort:new') data.sort((a,b)=> (new Date(b.created_at||0)) - (new Date(a.created_at||0)));
+    else if(F==='sort:old') data.sort((a,b)=> (new Date(a.created_at||0)) - (new Date(b.created_at||0)));
     tb.innerHTML=data.map(r=>{
       const avg = r.avg_total!=null ? r.avg_total : null;
       const pct = avg!=null ? Math.round(avg) : 0;
       const dob = r.date_of_birth ? esc(r.date_of_birth)+(ageFromDob(r.date_of_birth)?` (${ageFromDob(r.date_of_birth)})`:'') : '';
+      const entered = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB') : '';
       return `<tr>
         <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
-        <td>${esc(r.category||'')}</td><td>${esc(r.dance_style||'')}</td><td>${dob}</td>
+        <td>${esc(r.category||'')}</td><td>${esc(r.dance_style||'')}</td><td>${dob}</td><td style="white-space:nowrap">${entered}</td>
         <td><span class="pill ${r.payment_status}">${r.payment_status}</span></td>
         <td>${avg!=null?`<b style="color:var(--gold)">${avg}</b>/100<div class="bar" style="margin-top:5px"><i style="width:${pct}%"></i></div>`:'<span class="muted">Not scored</span>'}</td>
         <td class="tally">${r.num_scores||0}</td>
         <td style="white-space:nowrap">${(r.votes_perform||0)?`<span title="Perform at show">🎭 ${r.votes_perform}</span>`:'<span class="muted">-</span>'}</td>
         <td style="white-space:nowrap"><button class="btn ghost sm" data-view="${r.id}">View</button>${r.payment_status==='unpaid'?` <button class="btn ghost sm" data-paid="${r.id}">Mark paid</button>`:''}</td>
       </tr>`;
-    }).join('') || `<tr><td colspan="9" class="muted">No matching entries.</td></tr>`;
+    }).join('') || `<tr><td colspan="10" class="muted">No matching entries.</td></tr>`;
     tb.querySelectorAll('[data-paid]').forEach(b=>b.onclick=async()=>{await db.markPaid(b.getAttribute('data-paid'));renderAdmin();});
     tb.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>renderAdminEntry(rows.find(x=>x.id===b.getAttribute('data-view'))));
   }
