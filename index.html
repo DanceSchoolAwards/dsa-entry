@@ -543,15 +543,16 @@ function renderEntryForm(){
 function renderPayStep(name, price, payUrl){
   const fee = price!=null ? price : ENTRY_FEE;
   const payBlock = payUrl
-    ? `<a class="btn" href="${payUrl}" target="_blank" rel="noopener">Pay £${fee} now</a>`
+    ? `<a class="btn" href="${payUrl}" target="_blank" rel="noopener" style="font-size:16px;padding:14px 26px">Pay £${fee} now to complete your entry</a>`
     : `<span class="muted">Payment link unavailable. Please contact the organisers.</span>`;
   app.innerHTML=`
   <div class="center">
     <div class="card" style="width:520px;max-width:100%;text-align:center">
-      <h2 style="font-size:30px">Entry received 🎉</h2>
-      <p class="muted" style="margin:12px 0 22px">Thank you, ${esc(name)}. Your video has uploaded and your entry is submitted.
-      To complete it, please pay the £${fee} entry fee.</p>
+      <h2 style="font-size:30px">Payment required</h2>
+      <p class="muted" style="margin:12px 0 8px">Thank you, ${esc(name)}, your video has uploaded successfully.</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.55"><b style="color:var(--gold-soft)">To complete your entry, please pay the £${fee} fee below.</b> Your entry is not complete, and won't be submitted to the judges until payment is made.</p>
       ${payBlock}
+      <p class="muted" style="margin:16px 0 0;font-size:12px">Please don't close this page until you've completed payment.</p>
     </div>
   </div>`;
 }
