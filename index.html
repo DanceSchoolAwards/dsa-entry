@@ -197,7 +197,7 @@ function makeSupabaseDB(){
     },
     async listJudges(){ const {data,error}=await sb.from('profiles').select('id,full_name,role,assigned_styles').order('full_name'); if(error) throw error; return data; },
     async updateJudge(id,patch){ const {error}=await sb.from('profiles').update(patch).eq('id',id); if(error) throw error; },
-    async addEntry(e){ const {data,error}=await sb.from('entries').insert(e).select('id').single(); if(error) throw error; return data&&data.id; },
+    async addEntry(e){ const id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}); const {error}=await sb.from('entries').insert({id,...e}); if(error) throw error; return id; },
     async listEntries(){ const {data,error}=await sb.from('entries').select('*').order('created_at',{ascending:false}); if(error) throw error; return data; },
     async myDecisions(judgeId){ const {data,error}=await sb.from('decisions').select('*').eq('judge_id',judgeId); if(error) throw error; return data; },
     async setScore(entryId,judgeId,scores,notes,performShow){
