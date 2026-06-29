@@ -146,6 +146,8 @@ const NOTIFY_FN = SUPABASE_URL + "/functions/v1/notify-entry";
 const DROPBOX_UPLOAD_FN = SUPABASE_URL + "/functions/v1/dropbox-upload";
 // Brevo confirmation-email connector.
 const EMAIL_FN = SUPABASE_URL + "/functions/v1/send-entry-email";
+// Voucher / free-entry connector.
+const REDEEM_FN = SUPABASE_URL + "/functions/v1/redeem-voucher";
 
 const CATEGORIES   = ["Solo","Duet","Trios & Quartets","Group","International Solo","International Group"];
 const STYLES       = ["Ballet","Character","Contemporary","Lyrical","Commercial & Street","Jazz","Modern","Acro","Tap","Musical Theatre","Latin & Ballroom"];
@@ -195,7 +197,7 @@ function makeSupabaseDB(){
     },
     async listJudges(){ const {data,error}=await sb.from('profiles').select('id,full_name,role,assigned_styles').order('full_name'); if(error) throw error; return data; },
     async updateJudge(id,patch){ const {error}=await sb.from('profiles').update(patch).eq('id',id); if(error) throw error; },
-    async addEntry(e){ const {error}=await sb.from('entries').insert(e); if(error) throw error; },
+    async addEntry(e){ const {data,error}=await sb.from('entries').insert(e).select('id').single(); if(error) throw error; return data&&data.id; },
     async listEntries(){ const {data,error}=await sb.from('entries').select('*').order('created_at',{ascending:false}); if(error) throw error; return data; },
     async myDecisions(judgeId){ const {data,error}=await sb.from('decisions').select('*').eq('judge_id',judgeId); if(error) throw error; return data; },
     async setScore(entryId,judgeId,scores,notes,performShow){
@@ -268,7 +270,7 @@ function makeDemoDB(){
     async currentUser(){ return session?{id:session.id,email:session.email,name:session.name,role:session.role,assignedStyles:session.assigned_styles||[]}:null; },
     async listJudges(){ return users.map(u=>({id:u.id,full_name:u.name,role:u.role,assigned_styles:u.assigned_styles||[]})); },
     async updateJudge(id,patch){ const u=users.find(x=>x.id===id); if(u){ if(patch.full_name!=null)u.name=patch.full_name; if(patch.assigned_styles!=null)u.assigned_styles=patch.assigned_styles; } },
-    async addEntry(e){ entries.unshift({id:uid(),created_at:Date.now(),payment_status:'unpaid',entry_fee:ENTRY_FEE,...e}); },
+    async addEntry(e){ const id=uid(); entries.unshift({id,created_at:Date.now(),payment_status:'unpaid',entry_fee:ENTRY_FEE,...e}); return id; },
     async listEntries(){ return [...entries]; },
     async myDecisions(judgeId){ return decisions.filter(d=>d.judge_id===judgeId); },
     async setScore(entryId,judgeId,scores,notes,performShow){
@@ -526,12 +528,12 @@ function renderEntryForm(){
       const link=await uploadToDropbox(file, pct=>{ upBar.style.width=pct+'%'; upPct.textContent='Uploading… '+pct+'%'; },
         { category:data.category, style:data.dance_style, name:data.dancer_name, school:data.school_name });
       upPct.textContent='Saving your entry…';
-      await db.addEntry({
+      const entryId=await db.addEntry({
         dancer_name:data.dancer_name, school_name:data.school_name, category:data.category,
         dance_style:data.dance_style, date_of_birth:data.date_of_birth, email:data.email, phone:data.phone,
         video_url:link, entry_fee:price });
       window.removeEventListener('beforeunload', warn);
-      renderPayStep(data.dancer_name, price, payUrlFor(data.category));
+      renderPayStep(data.dancer_name, price, payUrlFor(data.category), entryId);
     }catch(e){
       window.removeEventListener('beforeunload', warn);
       msg.innerHTML='<span class="err">'+esc(e.message)+'</span>';
@@ -540,11 +542,20 @@ function renderEntryForm(){
   };
 }
 
-function renderPayStep(name, price, payUrl){
+function renderPayStep(name, price, payUrl, entryId){
   const fee = price!=null ? price : ENTRY_FEE;
   const payBlock = payUrl
     ? `<a class="btn" href="${payUrl}" target="_blank" rel="noopener" style="font-size:16px;padding:14px 26px">Pay £${fee} now to complete your entry</a>`
     : `<span class="muted">Payment link unavailable. Please contact the organisers.</span>`;
+  const voucherBlock = entryId ? `
+      <div style="margin:22px auto 0;max-width:360px;border-top:1px solid var(--line);padding-top:16px">
+        <p class="muted" style="margin:0 0 8px;font-size:13px">Have a voucher code? Enter it to complete your entry free of charge.</p>
+        <div style="display:flex;gap:8px;justify-content:center">
+          <input id="voucherInput" placeholder="Voucher code" style="flex:1;text-transform:uppercase" autocomplete="off">
+          <button class="btn" id="voucherApply" type="button">Apply</button>
+        </div>
+        <div id="voucherMsg" style="margin-top:8px;font-size:13px"></div>
+      </div>` : '';
   app.innerHTML=`
   <div class="center">
     <div class="card" style="width:520px;max-width:100%;text-align:center">
@@ -553,6 +564,37 @@ function renderPayStep(name, price, payUrl){
       <p style="margin:0 0 20px;font-size:15px;line-height:1.55"><b style="color:var(--gold-soft)">To complete your entry, please pay the £${fee} fee below.</b> Your entry is not complete, and won't be submitted to the judges until payment is made.</p>
       ${payBlock}
       <p class="muted" style="margin:16px 0 0;font-size:12px">Please don't close this page until you've completed payment.</p>
+      ${voucherBlock}
+    </div>
+  </div>`;
+  if(entryId){
+    const vInput=$('#voucherInput'), vBtn=$('#voucherApply'), vMsg=$('#voucherMsg');
+    vBtn.onclick=async ()=>{
+      const code=(vInput.value||'').trim();
+      if(!code){ vMsg.innerHTML='<span class="err">Please enter a code.</span>'; return; }
+      vBtn.disabled=true; vBtn.textContent='Checking…'; vMsg.textContent='';
+      try{
+        const res=await fetch(REDEEM_FN,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+SUPABASE_ANON_KEY},body:JSON.stringify({entry_id:entryId,code})});
+        const j=await res.json().catch(()=>({}));
+        if(j&&j.ok){ renderVoucherDone(name); return; }
+        vMsg.innerHTML='<span class="err">'+esc((j&&j.error)||'That code didn’t work.')+'</span>';
+        vBtn.disabled=false; vBtn.textContent='Apply';
+      }catch(e){
+        vMsg.innerHTML='<span class="err">Something went wrong. Please try again.</span>';
+        vBtn.disabled=false; vBtn.textContent='Apply';
+      }
+    };
+  }
+}
+
+function renderVoucherDone(name){
+  app.innerHTML=`
+  <div class="center">
+    <div class="card" style="width:520px;max-width:100%;text-align:center">
+      <h2 style="font-size:30px">Entry complete 🎉</h2>
+      <p class="muted" style="margin:12px 0 8px">Thank you, ${esc(name)}. Your voucher has been applied and your entry is now complete, free of charge.</p>
+      <p style="margin:14px 0 0;font-size:15px">No payment is needed. Your entry has been submitted to the judges.</p>
+      <a class="btn link" href="https://www.thedanceschoolawards.com/" style="margin-top:18px;display:inline-block">Back to The Dance School Awards</a>
     </div>
   </div>`;
 }
@@ -771,11 +813,13 @@ async function renderAdmin(){
   const paidRows=rows.filter(r=>r.payment_status==='paid');
   const paid=paidRows.length;
   const revenue=paidRows.reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
+  const scoutUsed=rows.filter(r=>['SCOUTPASS26','SCOUTED26'].includes(String(r.voucher_code||'').toUpperCase())).length;
+  const moveUsed=rows.filter(r=>String(r.voucher_code||'').toUpperCase()==='MOVEIT26').length;
 
   app.innerHTML=`<div class="wrap">
     <div class="section-title"><h2>Admin Results</h2>
       <span style="display:flex;gap:14px;align-items:center">
-        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected</span>
+        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26</span>
         <button class="btn ghost sm" id="noticeBoardBtn">📋 Notice board</button>
         <button class="btn ghost sm" id="manageJudges">Judges &amp; sections</button>
       </span></div>
@@ -802,6 +846,11 @@ async function renderAdmin(){
           <option value="scout">⭐ Has scout pass</option>
           <option value="perform">🎭 Selected to perform</option>
         </optgroup>
+        <optgroup label="Voucher">
+          <option value="voucher:any">🎟️ Any voucher used</option>
+          <option value="voucher:SCOUTPASS26">🎟️ SCOUTPASS26</option>
+          <option value="voucher:MOVEIT26">🎟️ MOVEIT26</option>
+        </optgroup>
       </select>
     </div>
     <div style="overflow-x:auto">
@@ -824,6 +873,8 @@ async function renderAdmin(){
       if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
       if(F==='scout'&&!r.scout_pass_judge_id) return false;
       if(F==='perform'&&!r.selected_to_perform) return false;
+      if(F==='voucher:any'&&!r.voucher_code) return false;
+      if(F.startsWith('voucher:')&&F!=='voucher:any'&&String(r.voucher_code||'').toUpperCase()!==F.slice(8)) return false;
       if(F.startsWith('date:')){
         const t=r.created_at?new Date(r.created_at).getTime():0;
         if(!t) return false;
@@ -841,7 +892,7 @@ async function renderAdmin(){
       const dob = r.date_of_birth ? esc(r.date_of_birth)+(ageFromDob(r.date_of_birth)?` (${ageFromDob(r.date_of_birth)})`:'') : '';
       const entered = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB') : '';
       return `<tr>
-        <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
+        <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}${r.voucher_code?` <span title="Voucher used" style="color:#9fd4ff;font-size:12px;white-space:nowrap">🎟️ ${esc(r.voucher_code)}</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
         <td>${esc(r.category||'')}</td><td>${esc(r.dance_style||'')}</td><td>${dob}</td><td style="white-space:nowrap">${entered}</td>
         <td><span class="pill ${r.payment_status}">${r.payment_status}</span></td>
         <td>${avg!=null?`<b style="color:var(--gold)">${avg}</b>/100<div class="bar" style="margin-top:5px"><i style="width:${pct}%"></i></div>`:'<span class="muted">Not scored</span>'}</td>
@@ -860,10 +911,10 @@ async function renderAdmin(){
     t.classList.add('active'); filter=t.getAttribute('data-f'); paint();
   });
   $('#exportBtn').onclick=()=>{
-    const head=['Dancer','School','Email','Phone','Category','Style','DOB','Payment','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
+    const head=['Dancer','School','Email','Phone','Category','Style','DOB','Payment','Voucher','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
     const lines=[head.join(',')].concat(rows.map(r=>[
       r.dancer_name,r.school_name,r.email,r.phone,r.category,r.dance_style,r.date_of_birth,
-      r.payment_status,r.scout_pass_judge_name||'',r.selected_to_perform?'Yes':'',
+      r.payment_status,r.voucher_code||'',r.scout_pass_judge_name||'',r.selected_to_perform?'Yes':'',
       r.avg_total!=null?r.avg_total:'',r.num_scores||0,r.votes_perform||0
     ].map(v=>`"${(v==null?'':v).toString().replace(/"/g,'""')}"`).join(',')));
     const blob=new Blob([lines.join('\n')],{type:'text/csv'});
@@ -894,6 +945,7 @@ async function renderAdminEntry(r){
     ['Phone', r.phone],
     ['Entry fee', r.entry_fee!=null?'£'+r.entry_fee:''],
     ['Payment', r.payment_status],
+    ['Voucher used', r.voucher_code||'—'],
     ['Scout pass', r.scout_pass_judge_name?('⭐ Yes — from '+r.scout_pass_judge_name):'No'],
     ['Selected to perform', r.selected_to_perform?'🎭 Yes':'No'],
     ['Average score', r.avg_total!=null?r.avg_total+' / 100':'Not scored'],
