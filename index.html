@@ -448,7 +448,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 46</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 48</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -824,7 +824,7 @@ async function renderAdmin(){
         <button class="btn ghost sm" id="manageJudges">Judges &amp; sections</button>
       </span></div>
     <div class="toolbar">
-      <input id="search" placeholder="Search dancer or school…">
+      <input id="search" placeholder="Search anything — name, school, email, age, style…">
       <button class="tab active" data-f="paid">Paid</button>
       <button class="tab" data-f="unpaid">Unpaid</button>
       <button class="tab" data-f="all">All</button>
@@ -868,7 +868,7 @@ async function renderAdmin(){
     const tb=$('#resTable tbody');
     const data=rows.filter(r=>{
       if(filter!=='all'&&r.payment_status!==filter) return false;
-      if(q&&!(`${r.dancer_name} ${r.school_name||''}`.toLowerCase().includes(q))) return false;
+      if(q){ const hay=`${r.dancer_name||''} ${r.school_name||''} ${r.email||''} ${r.phone||''} ${r.category||''} ${r.dance_style||''} ${r.date_of_birth||''} ${ageFromDob(r.date_of_birth)||''} ${r.payment_status||''} ${r.voucher_code||''} ${r.scout_pass_judge_name||''}`.toLowerCase(); if(!hay.includes(q)) return false; }
       if(F.startsWith('cat:')&&r.category!==F.slice(4)) return false;
       if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
       if(F==='scout'&&!r.scout_pass_judge_id) return false;
