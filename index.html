@@ -448,7 +448,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 48</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 60</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -669,6 +669,7 @@ async function renderJudge(){
       <h2>Judging</h2>
       <span style="display:flex;gap:12px;align-items:center">
         <span class="muted">${pending.length} to score · ${done.length} scored</span>
+        <button class="btn ghost sm" id="judgeTop5">🏆 Top 5</button>
         <button class="btn ghost sm" id="judgeNotices">📋 Notice board</button>
       </span>
     </div>
@@ -681,9 +682,14 @@ async function renderJudge(){
       <select id="styleFilter" style="max-width:220px">${styleOptions}</select>
     </div>
     <div class="toolbar" style="margin:10px 0 0;flex-wrap:wrap;gap:8px">
+      <input id="judgeSearch" placeholder="Search dancer or school…" style="max-width:240px">
       <select id="judgeFilter" style="max-width:260px">
         <option value="">Filter by…</option>
         <optgroup label="Category">${CATEGORIES.map(c=>`<option value="cat:${esc(c)}">${esc(c)}</option>`).join('')}</optgroup>
+        <optgroup label="Score">
+          <option value="sort:score-high">Score: high to low</option>
+          <option value="sort:score-low">Score: low to high</option>
+        </optgroup>
         <optgroup label="Other">
           <option value="scout">⭐ Has scout pass</option>
           <option value="perform">🎭 Selected to perform</option>
@@ -693,12 +699,13 @@ async function renderJudge(){
     <div id="judgeList" style="margin-top:18px"></div>
   </div>`;
 
-  let curTab='todo', curStyle='__all', jF='';
+  let curTab='todo', curStyle='__all', jF='', jQ='';
   function matchFilters(e){
     if(curStyle!=='__all' && groupOf(e)!==curStyle) return false;
     if(jF.startsWith('cat:') && e.category!==jF.slice(4)) return false;
     if(jF==='scout' && !e.scout_pass_judge_id) return false;
     if(jF==='perform' && !e.selected_to_perform) return false;
+    if(jQ){ const hay=`${e.dancer_name||''} ${e.school_name||''} ${e.category||''} ${e.dance_style||''}`.toLowerCase(); if(!hay.includes(jQ)) return false; }
     return true;
   }
 
@@ -710,6 +717,9 @@ async function renderJudge(){
     const groups = (curStyle==='__all' ? groupOrder : [curStyle])
       .map(s=>({style:s, rows:items.filter(e=>groupOf(e)===s)}))
       .filter(g=>g.rows.length);
+    const scoreOf = e => { const d=decided.get(e.id); return d ? (Number(d.score_technique)||0)+(Number(d.score_artistry)||0)+(Number(d.score_choreography)||0)+(Number(d.score_presence)||0) : -1; };
+    if(jF==='sort:score-high') groups.forEach(g=>g.rows.sort((a,b)=>scoreOf(b)-scoreOf(a)));
+    else if(jF==='sort:score-low') groups.forEach(g=>g.rows.sort((a,b)=>scoreOf(a)-scoreOf(b)));
     box.innerHTML = groups.map(g=>`
       <div style="margin-bottom:26px">
         <h3 style="font-size:22px;color:var(--gold);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:14px">
@@ -769,7 +779,7 @@ async function renderJudge(){
       return `<div class="score-row"><label>${esc(p.label)}</label>
         <input type="number" min="0" max="25" step="1" data-score="${e.id}|${p.col}" value="${v}" placeholder="/25"></div>`;
     }).join('');
-    return `<div class="entry">
+    return `<div class="entry" id="jcard-${esc(e.id)}">
       <div class="video-box">${player}</div>
       <div class="entry-body">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
@@ -799,11 +809,148 @@ async function renderJudge(){
   });
   $('#styleFilter').onchange=e=>{ curStyle=e.target.value; paint(); };
   $('#judgeFilter').onchange=e=>{ jF=e.target.value; paint(); };
+  $('#judgeSearch').oninput=e=>{ jQ=e.target.value.trim().toLowerCase(); paint(); };
   $('#judgeNotices').onclick=()=>renderNoticeBoard();
+  $('#judgeTop5').onclick=()=>renderJudgeLeaderboard();
+  // Open an entry's card (video + your marks) — used when returning from the Top 5 page.
+  function gotoEntry(id){
+    curTab='done';
+    app.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active', x.getAttribute('data-tab')==='done'));
+    curStyle='__all'; jF='';
+    const sf=$('#styleFilter'); if(sf) sf.value='__all';
+    const jf=$('#judgeFilter'); if(jf) jf.value='';
+    paint();
+    setTimeout(()=>{
+      const el=document.getElementById('jcard-'+id);
+      if(el){ el.scrollIntoView({behavior:'smooth',block:'center'}); el.style.transition='box-shadow .3s'; el.style.boxShadow='0 0 0 2px var(--gold)'; setTimeout(()=>{ el.style.boxShadow=''; }, 1800); }
+    }, 60);
+  }
   paint();
+  if(judgeFocusEntry){ const fe=judgeFocusEntry; judgeFocusEntry=null; gotoEntry(fe); }
+}
+
+let judgeFocusEntry=null;   // set when a judge taps a name on the Top 5 page
+async function renderJudgeLeaderboard(){
+  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Your top 5</h2></div><div class="muted">Loading…</div></div>`;
+  const u=state.user;
+  const [entries,mine]=await Promise.all([db.listEntries(),db.myDecisions(u.id)]);
+  const decided=new Map(mine.map(d=>[d.entry_id,d]));
+  const myRules=(u.assignedStyles||[]);
+  const list=entries.filter(e=>e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category));
+  const done=list.filter(e=>decScored(decided.get(e.id)));
+  const myTotal = d => d ? (Number(d.score_technique)||0)+(Number(d.score_artistry)||0)+(Number(d.score_choreography)||0)+(Number(d.score_presence)||0) : 0;
+  const secMap=new Map();
+  done.forEach(e=>{ const label=`${styleGroup(e.dance_style)||'Unspecified'} ${e.category||''}`.trim(); if(!secMap.has(label)) secMap.set(label,[]); secMap.get(label).push({e,total:myTotal(decided.get(e.id))}); });
+  const sections=[...secMap.entries()].map(([label,arr])=>{
+    const sorted=arr.sort((a,b)=>b.total-a.total);
+    const avg=sorted.length?Math.round(sorted.reduce((s,x)=>s+x.total,0)/sorted.length):0;
+    return {label, sorted, count:sorted.length, avg};
+  }).sort((a,b)=>a.label.localeCompare(b.label));
+  const rowHtml=(x,i)=>{
+    const dec=decided.get(x.e.id);
+    const perform=dec&&dec.perform_at_show;
+    const pv=dropboxEmbed(x.e.video_url);
+    const thumb=pv?`<video src="${esc(pv)}#t=0.5" muted preload="metadata" playsinline style="width:96px;height:56px;object-fit:cover;border-radius:5px;background:#000;pointer-events:none;display:block"></video>`:`<div style="width:96px;height:56px;border-radius:5px;background:#000"></div>`;
+    return `<tr data-goto="${esc(x.e.id)}" title="Open this entry" class="${i>=5?'lb-hide':''}" style="cursor:pointer;border-top:1px solid var(--line)${i>=5?';display:none':''}">
+      <td style="padding:8px 8px;color:var(--gold);font-weight:bold">${i+1}</td>
+      <td style="padding:6px 8px">${thumb}</td>
+      <td style="padding:8px 8px"><b style="border-bottom:1px dashed var(--gold-soft)">${esc(x.e.dancer_name)}</b></td>
+      <td class="muted" style="padding:8px 8px;font-size:13px">${esc(x.e.school_name||'')}</td>
+      <td class="muted" style="padding:8px 8px;font-size:13px;white-space:nowrap">${ageFromDob(x.e.date_of_birth)||'—'}</td>
+      <td class="muted" style="padding:8px 8px;font-size:13px;white-space:nowrap">${esc(x.e.category||'')}</td>
+      <td style="padding:8px 8px;text-align:right;color:var(--gold);font-weight:bold;white-space:nowrap">${x.total}/100</td>
+      <td style="padding:8px 8px;text-align:center;white-space:nowrap">${perform?'<span title="Nominated to perform" style="color:#7fe6c4">🎭 Yes</span>':'<span class="muted">—</span>'}</td>
+    </tr>`;
+  };
+  app.innerHTML=`<div class="wrap">
+    <div class="section-title">
+      <h2>🏆 Your top 5</h2>
+      <button class="btn ghost sm" id="lbBack">← Back to judging</button>
+    </div>
+    <p class="muted" style="margin:-4px 0 16px">Your highest marks so far, per section. The Nominated column shows entries you flagged to perform. Tap a row to open that entry and its video.</p>
+    ${sections.length ? sections.map((s,si)=>`
+      <div class="card" style="margin:0 0 16px;padding:14px 18px">
+        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:6px">
+          <div style="font-size:14px;color:var(--gold);text-transform:uppercase;letter-spacing:.05em">${esc(s.label)} <span class="muted" style="font-size:12px;text-transform:none;letter-spacing:0">(${s.count} scored)</span></div>
+          <span class="muted" style="font-size:12px;white-space:nowrap">avg ${s.avg}/100</span>
+        </div>
+        <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:14px">
+          <thead><tr class="muted" style="text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em">
+            <th style="padding:4px 8px;width:30px">#</th>
+            <th style="padding:4px 8px">Preview</th>
+            <th style="padding:4px 8px">Dancer / group</th>
+            <th style="padding:4px 8px">School</th>
+            <th style="padding:4px 8px">Age</th>
+            <th style="padding:4px 8px">Type</th>
+            <th style="padding:4px 8px;text-align:right">Score</th>
+            <th style="padding:4px 8px;text-align:center">Nominated to perform</th>
+          </tr></thead>
+          <tbody data-sec="${si}">
+            ${s.sorted.map((x,i)=>rowHtml(x,i)).join('')}
+          </tbody>
+        </table>
+        </div>
+        ${s.count>5?`<button class="btn ghost sm" data-showall="${si}" data-count="${s.count}" style="margin-top:10px">Show all ${s.count}</button>`:''}
+      </div>`).join('') : `<p class="muted">You haven't scored any entries yet. Once you do, your top 5 for each section will appear here.</p>`}
+  </div>`;
+  $('#lbBack').onclick=()=>renderJudge();
+  app.querySelectorAll('[data-goto]').forEach(tr=>tr.onclick=()=>renderJudgeEntry(tr.getAttribute('data-goto')));
+  app.querySelectorAll('[data-showall]').forEach(btn=>btn.onclick=()=>{
+    const tb=btn.parentElement.querySelector('tbody[data-sec]');
+    const hidden=tb.querySelectorAll('.lb-hide');
+    const showing=hidden.length && hidden[0].style.display!=='none';
+    hidden.forEach(r=>{ r.style.display = showing?'none':'table-row'; });
+    btn.textContent = showing ? ('Show all '+btn.getAttribute('data-count')) : 'Show top 5';
+  });
+}
+
+// A single entry on its own page, with the full judging card + your marks.
+async function renderJudgeEntry(entryId){
+  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Loading…</h2></div></div>`;
+  const u=state.user;
+  const [entries,mine]=await Promise.all([db.listEntries(),db.myDecisions(u.id)]);
+  const e=entries.find(x=>x.id===entryId);
+  if(!e){ renderJudgeLeaderboard(); return; }
+  const dec=mine.find(d=>d.entry_id===entryId);
+  const src=dropboxEmbed(e.video_url);
+  const player= isVideoFile(e.video_url)
+    ? `<video controls preload="metadata" src="${esc(src)}"></video>`
+    : `<iframe src="${esc(src)}" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+  const scored=decScored(dec);
+  const age=ageFromDob(e.date_of_birth);
+  const dob=e.date_of_birth?esc(e.date_of_birth)+(age?` (age ${age})`:''):'Not given';
+  const detailRow=(label,val)=>`<div style="display:flex;gap:8px;padding:3px 0"><span class="muted" style="min-width:120px;display:inline-block">${label}</span><b>${val}</b></div>`;
+  const details = detailRow('Dance school', e.school_name?esc(e.school_name):'Not given')+detailRow('Date of birth', dob)+detailRow('Category', esc(e.category))+detailRow('Dance style', esc(e.dance_style));
+  const scoreRows = SCORE_PARTS.map(p=>{ const v=dec&&dec[p.col]!=null?dec[p.col]:''; return `<div class="score-row"><label>${esc(p.label)}</label><input type="number" min="0" max="25" step="1" data-score="${e.id}|${p.col}" value="${v}" placeholder="/25"></div>`; }).join('');
+  app.innerHTML=`<div class="wrap">
+    <div class="section-title">
+      <h2>${esc(e.dancer_name||'Entry')}</h2>
+      <button class="btn ghost sm" id="jeBack">← Back to Top 5</button>
+    </div>
+    <div class="entry" id="jcard-${esc(e.id)}" style="max-width:640px">
+      <div class="video-box">${player}</div>
+      <div class="entry-body">
+        <div class="entry-meta" style="display:block;font-size:14px;margin:0 0 12px">${details}</div>
+        <div class="score-box">
+          ${scoreRows}
+          <div class="score-total"><span class="muted">Total</span><b data-total="${e.id}">${scored?decTotal(dec):0}/100</b></div>
+        </div>
+        <textarea data-notes="${e.id}" rows="2" placeholder="Notes (optional)">${esc(dec&&dec.notes||'')}</textarea>
+        <label class="nom" style="background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:9px 11px"><input type="checkbox" data-perform="${e.id}" ${dec&&dec.perform_at_show?'checked':''}> 🎭 Nominate to perform at the show</label>
+        <div class="entry-actions"><button class="btn sm" data-save="${e.id}" style="flex:1">${scored?'✓ Update score':'Save score'}</button></div>
+        <div data-msg="${e.id}" style="margin-top:2px"></div>
+      </div>
+    </div>
+  </div>`;
+  $('#jeBack').onclick=()=>renderJudgeLeaderboard();
+  const box=app;
+  box.querySelectorAll('input[data-score]').forEach(inp=>{ inp.oninput=()=>{ const id=inp.getAttribute('data-score').split('|')[0]; let t=0; SCORE_PARTS.forEach(p=>{ const el=box.querySelector(`input[data-score="${id}|${p.col}"]`); let n=Number(el.value); if(isNaN(n))n=0; n=Math.max(0,Math.min(25,n)); t+=n; }); const tt=box.querySelector(`[data-total="${id}"]`); if(tt) tt.textContent=t+'/100'; }; });
+  box.querySelectorAll('[data-save]').forEach(btn=>{ btn.onclick=async()=>{ const id=btn.getAttribute('data-save'); const msg=box.querySelector(`[data-msg="${id}"]`); const scores={}; let valid=true; SCORE_PARTS.forEach(p=>{ const v=box.querySelector(`input[data-score="${id}|${p.col}"]`).value.trim(); if(v===''){ valid=false; scores[p.col]=null; return; } scores[p.col]=Math.max(0,Math.min(25,Math.round(Number(v)))); }); if(!valid){ msg.innerHTML='<span class="err">Please give a mark (0–25) for all four criteria.</span>'; return; } const notes=box.querySelector(`textarea[data-notes="${id}"]`).value; const perform=box.querySelector(`input[data-perform="${id}"]`).checked; btn.textContent='Saving…'; btn.disabled=true; await db.setScore(id,u.id,scores,notes,perform); renderJudgeLeaderboard(); }; });
 }
 
 /* ---------- Admin dashboard ---------- */
+let adminState={filter:'paid',q:'',F:''};   // remembered so search survives viewing an entry
 async function renderAdmin(){
   app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Admin</h2></div>
     <div class="muted">Loading…</div></div>`;
@@ -813,13 +960,14 @@ async function renderAdmin(){
   const paidRows=rows.filter(r=>r.payment_status==='paid');
   const paid=paidRows.length;
   const revenue=paidRows.reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
+  const outstanding=rows.filter(r=>r.payment_status==='unpaid').reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
   const scoutUsed=rows.filter(r=>['SCOUTPASS26','SCOUTED26'].includes(String(r.voucher_code||'').toUpperCase())).length;
   const moveUsed=rows.filter(r=>String(r.voucher_code||'').toUpperCase()==='MOVEIT26').length;
 
   app.innerHTML=`<div class="wrap">
     <div class="section-title"><h2>Admin Results</h2>
       <span style="display:flex;gap:14px;align-items:center">
-        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26</span>
+        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · £${outstanding} outstanding · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26</span>
         <button class="btn ghost sm" id="noticeBoardBtn">📋 Notice board</button>
         <button class="btn ghost sm" id="manageJudges">Judges &amp; sections</button>
       </span></div>
@@ -842,7 +990,12 @@ async function renderAdmin(){
           <option value="date:7">Entered in last 7 days</option>
           <option value="date:30">Entered in last 30 days</option>
         </optgroup>
+        <optgroup label="Score">
+          <option value="sort:score-high">Score: highest first</option>
+          <option value="sort:score-low">Score: lowest first</option>
+        </optgroup>
         <optgroup label="Other">
+          <option value="unscored">⏳ Awaiting scores (no judges yet)</option>
           <option value="scout">⭐ Has scout pass</option>
           <option value="perform">🎭 Selected to perform</option>
         </optgroup>
@@ -863,16 +1016,17 @@ async function renderAdmin(){
     </table></div>
   </div>`;
 
-  let filter='paid', q='', F='';
+  let filter=adminState.filter, q=adminState.q, F=adminState.F;
   function paint(){
     const tb=$('#resTable tbody');
     const data=rows.filter(r=>{
       if(filter!=='all'&&r.payment_status!==filter) return false;
-      if(q){ const hay=`${r.dancer_name||''} ${r.school_name||''} ${r.email||''} ${r.phone||''} ${r.category||''} ${r.dance_style||''} ${r.date_of_birth||''} ${ageFromDob(r.date_of_birth)||''} ${r.payment_status||''} ${r.voucher_code||''} ${r.scout_pass_judge_name||''}`.toLowerCase(); if(!hay.includes(q)) return false; }
+      if(q){ const qq=q.trim().toLowerCase(); const hay=`${r.dancer_name||''} ${r.school_name||''} ${r.email||''} ${r.phone||''} ${r.category||''} ${r.dance_style||''} ${r.date_of_birth||''} ${ageFromDob(r.date_of_birth)||''} ${r.payment_status||''} ${r.voucher_code||''} ${r.scout_pass_judge_name||''}`.toLowerCase(); if(qq && !hay.includes(qq)) return false; }
       if(F.startsWith('cat:')&&r.category!==F.slice(4)) return false;
       if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
       if(F==='scout'&&!r.scout_pass_judge_id) return false;
       if(F==='perform'&&!r.selected_to_perform) return false;
+      if(F==='unscored'&&(r.num_scores||0)>0) return false;
       if(F==='voucher:any'&&!r.voucher_code) return false;
       if(F.startsWith('voucher:')&&F!=='voucher:any'&&String(r.voucher_code||'').toUpperCase()!==F.slice(8)) return false;
       if(F.startsWith('date:')){
@@ -886,6 +1040,8 @@ async function renderAdmin(){
     });
     if(F==='sort:new') data.sort((a,b)=> (new Date(b.created_at||0)) - (new Date(a.created_at||0)));
     else if(F==='sort:old') data.sort((a,b)=> (new Date(a.created_at||0)) - (new Date(b.created_at||0)));
+    else if(F==='sort:score-low') data.sort((a,b)=> (a.avg_total==null?Infinity:a.avg_total) - (b.avg_total==null?Infinity:b.avg_total));
+    else if(F==='sort:score-high') data.sort((a,b)=> (b.avg_total==null?-1:b.avg_total) - (a.avg_total==null?-1:a.avg_total));
     tb.innerHTML=data.map(r=>{
       const avg = r.avg_total!=null ? r.avg_total : null;
       const pct = avg!=null ? Math.round(avg) : 0;
@@ -904,11 +1060,14 @@ async function renderAdmin(){
     tb.querySelectorAll('[data-paid]').forEach(b=>b.onclick=async()=>{await db.markPaid(b.getAttribute('data-paid'));renderAdmin();});
     tb.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>renderAdminEntry(rows.find(x=>x.id===b.getAttribute('data-view'))));
   }
-  $('#search').oninput=e=>{q=e.target.value.toLowerCase();paint();};
-  $('#adminFilter').onchange=e=>{F=e.target.value;paint();};
+  // Restore any remembered search/filter/tab so viewing an entry doesn't reset it.
+  $('#search').value=q; $('#adminFilter').value=F;
+  app.querySelectorAll('[data-f]').forEach(x=>x.classList.toggle('active', x.getAttribute('data-f')===filter));
+  $('#search').oninput=e=>{q=e.target.value;adminState.q=q;paint();};
+  $('#adminFilter').onchange=e=>{F=e.target.value;adminState.F=F;paint();};
   app.querySelectorAll('[data-f]').forEach(t=>t.onclick=()=>{
     app.querySelectorAll('[data-f]').forEach(x=>x.classList.remove('active'));
-    t.classList.add('active'); filter=t.getAttribute('data-f'); paint();
+    t.classList.add('active'); filter=t.getAttribute('data-f'); adminState.filter=filter; paint();
   });
   $('#exportBtn').onclick=()=>{
     const head=['Dancer','School','Email','Phone','Category','Style','DOB','Payment','Voucher','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
@@ -964,7 +1123,7 @@ async function renderAdminEntry(r){
       <table id="entryTable" style="width:100%;margin-top:16px;font-size:14px">
         ${fields.map(([k,v])=>`<tr>
           <td style="color:var(--muted);width:190px;padding:9px 10px;border-bottom:1px solid var(--line)">${k}</td>
-          <td style="padding:9px 10px;border-bottom:1px solid var(--line)">${esc(v||'-')}</td></tr>`).join('')}
+          <td style="padding:9px 10px;border-bottom:1px solid var(--line)">${k==='Email'&&v?`<a href="mailto:${esc(v)}">${esc(v)}</a>`:esc(v||'-')}</td></tr>`).join('')}
       </table>
 
       <div id="editPanel" style="display:none;margin-top:16px;border:1px solid var(--line);border-radius:12px;padding:16px;background:var(--panel-2)">
