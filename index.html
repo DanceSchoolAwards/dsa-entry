@@ -448,7 +448,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 61</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 62</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -1093,24 +1093,17 @@ async function renderAdminLeaderboards(){
   let judges=[]; try{ judges=(await db.listJudges()).filter(j=>j.role==='judge'); }catch(e){}
   const rows=await db.results();
   const eById=new Map(rows.map(e=>[e.id,e]));
-  app.innerHTML=`<div class="wrap">
-    <div class="section-title"><h2>🏆 Judges' top 5</h2>
-      <button class="btn ghost sm" id="lbBack">← Back to results</button></div>
-    <p class="muted" style="margin:-4px 0 14px">Each judge's highest-scored entries per section (their own marks), and what they nominated to perform. Tap a row to open the full entry.</p>
-    <select id="lbJudge" style="max-width:320px;margin-bottom:16px">${judges.length?judges.map(j=>`<option value="${esc(j.id)}">${esc(j.full_name)}</option>`).join(''):'<option value="">No judges</option>'}</select>
-    <div id="lbBody"></div>
-  </div>`;
-  $('#lbBack').onclick=()=>renderAdmin();
-  async function show(judgeId){
-    const body=$('#lbBody'); body.innerHTML='<div class="muted">Loading…</div>';
-    let mine=[]; try{ mine=await db.myDecisions(judgeId); }catch(e){}
-    const total=d=>d?(Number(d.score_technique)||0)+(Number(d.score_artistry)||0)+(Number(d.score_choreography)||0)+(Number(d.score_presence)||0):0;
-    const scored=mine.filter(d=>decScored(d));
+  const decByJudge={};
+  await Promise.all(judges.map(async j=>{ try{ decByJudge[j.id]=await db.myDecisions(j.id); }catch(e){ decByJudge[j.id]=[]; } }));
+  const total=d=>d?(Number(d.score_technique)||0)+(Number(d.score_artistry)||0)+(Number(d.score_choreography)||0)+(Number(d.score_presence)||0):0;
+  function sectionsFor(judgeId){
+    const scored=(decByJudge[judgeId]||[]).filter(d=>decScored(d));
     const secMap=new Map();
     scored.forEach(d=>{ const e=eById.get(d.entry_id); if(!e) return; const label=`${styleGroup(e.dance_style)||'Unspecified'} ${e.category||''}`.trim(); if(!secMap.has(label)) secMap.set(label,[]); secMap.get(label).push({e,d,total:total(d)}); });
-    const sections=[...secMap.entries()].map(([label,arr])=>({label,rows:arr.sort((a,b)=>b.total-a.total).slice(0,5),count:arr.length})).sort((a,b)=>a.label.localeCompare(b.label));
-    if(!sections.length){ body.innerHTML='<p class="muted">This judge has not scored any entries yet.</p>'; return; }
-    body.innerHTML=sections.map(s=>`
+    return [...secMap.entries()].map(([label,arr])=>({label,rows:arr.sort((a,b)=>b.total-a.total).slice(0,5),count:arr.length})).sort((a,b)=>a.label.localeCompare(b.label));
+  }
+  function tablesHtml(sections){
+    return sections.map(s=>`
       <div class="card" style="margin:0 0 16px;padding:14px 18px">
         <div style="font-size:14px;color:var(--gold);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px">${esc(s.label)} <span class="muted" style="font-size:12px;text-transform:none">(${s.count} scored)</span></div>
         <div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px">
@@ -1128,10 +1121,31 @@ async function renderAdminLeaderboards(){
           </tr>`).join('')}</tbody>
         </table></div>
       </div>`).join('');
+  }
+  function judgeBlock(j){
+    const secs=sectionsFor(j.id);
+    return `<div style="margin-bottom:26px"><h2 style="font-size:22px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:14px">${esc(j.full_name)}</h2>${secs.length?tablesHtml(secs):'<p class="muted">This judge has not scored any entries yet.</p>'}</div>`;
+  }
+  app.innerHTML=`<div class="wrap">
+    <div class="section-title"><h2>🏆 Judges' top 5</h2>
+      <button class="btn ghost sm" id="lbBack">← Back to results</button></div>
+    <p class="muted" style="margin:-4px 0 14px">Each judge's highest-scored entries per section (their own marks), and what they nominated to perform. Showing all judges, or pick one from the dropdown. Tap a row to open the full entry.</p>
+    <select id="lbJudge" style="max-width:320px;margin-bottom:16px">
+      <option value="__all">All judges</option>
+      ${judges.map(j=>`<option value="${esc(j.id)}">${esc(j.full_name)}</option>`).join('')}
+    </select>
+    <div id="lbBody"></div>
+  </div>`;
+  $('#lbBack').onclick=()=>renderAdmin();
+  function show(v){
+    const body=$('#lbBody');
+    body.innerHTML = v==='__all'
+      ? (judges.length?judges.map(judgeBlock).join(''):'<p class="muted">No judges yet.</p>')
+      : judgeBlock(judges.find(j=>j.id===v)||{id:v,full_name:'Judge'});
     body.querySelectorAll('[data-view]').forEach(tr=>tr.onclick=()=>renderAdminEntry(rows.find(x=>x.id===tr.getAttribute('data-view'))));
   }
   $('#lbJudge').onchange=e=>show(e.target.value);
-  if(judges.length) show(judges[0].id);
+  show('__all');
 }
 
 /* ---------- Admin: full entry view (video, details + each judge's scores) ---------- */
