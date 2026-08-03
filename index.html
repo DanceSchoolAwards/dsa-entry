@@ -448,7 +448,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 62</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 63</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -669,7 +669,7 @@ async function renderJudge(){
       <h2>Judging</h2>
       <span style="display:flex;gap:12px;align-items:center">
         <span class="muted">${pending.length} to score · ${done.length} scored</span>
-        <button class="btn ghost sm" id="judgeTop5">🏆 Top 5</button>
+        <button class="btn ghost sm" id="judgeTop5">🏆 Top 8</button>
         <button class="btn ghost sm" id="judgeNotices">📋 Notice board</button>
       </span>
     </div>
@@ -831,7 +831,7 @@ async function renderJudge(){
 
 let judgeFocusEntry=null;   // set when a judge taps a name on the Top 5 page
 async function renderJudgeLeaderboard(){
-  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Your top 5</h2></div><div class="muted">Loading…</div></div>`;
+  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Your top 8</h2></div><div class="muted">Loading…</div></div>`;
   const u=state.user;
   const [entries,mine]=await Promise.all([db.listEntries(),db.myDecisions(u.id)]);
   const decided=new Map(mine.map(d=>[d.entry_id,d]));
@@ -851,7 +851,7 @@ async function renderJudgeLeaderboard(){
     const perform=dec&&dec.perform_at_show;
     const pv=dropboxEmbed(x.e.video_url);
     const thumb=pv?`<video src="${esc(pv)}#t=0.5" muted preload="metadata" playsinline style="width:96px;height:56px;object-fit:cover;border-radius:5px;background:#000;pointer-events:none;display:block"></video>`:`<div style="width:96px;height:56px;border-radius:5px;background:#000"></div>`;
-    return `<tr data-goto="${esc(x.e.id)}" title="Open this entry" class="${i>=5?'lb-hide':''}" style="cursor:pointer;border-top:1px solid var(--line)${i>=5?';display:none':''}">
+    return `<tr data-goto="${esc(x.e.id)}" title="Open this entry" class="${i>=8?'lb-hide':''}" style="cursor:pointer;border-top:1px solid var(--line)${i>=8?';display:none':''}">
       <td style="padding:8px 8px;color:var(--gold);font-weight:bold">${i+1}</td>
       <td style="padding:6px 8px">${thumb}</td>
       <td style="padding:8px 8px"><b style="border-bottom:1px dashed var(--gold-soft)">${esc(x.e.dancer_name)}</b></td>
@@ -864,7 +864,7 @@ async function renderJudgeLeaderboard(){
   };
   app.innerHTML=`<div class="wrap">
     <div class="section-title">
-      <h2>🏆 Your top 5</h2>
+      <h2>🏆 Your top 8</h2>
       <button class="btn ghost sm" id="lbBack">← Back to judging</button>
     </div>
     <p class="muted" style="margin:-4px 0 16px">Your highest marks so far, per section. The Nominated column shows entries you flagged to perform. Tap a row to open that entry and its video.</p>
@@ -891,8 +891,8 @@ async function renderJudgeLeaderboard(){
           </tbody>
         </table>
         </div>
-        ${s.count>5?`<button class="btn ghost sm" data-showall="${si}" data-count="${s.count}" style="margin-top:10px">Show all ${s.count}</button>`:''}
-      </div>`).join('') : `<p class="muted">You haven't scored any entries yet. Once you do, your top 5 for each section will appear here.</p>`}
+        ${s.count>8?`<button class="btn ghost sm" data-showall="${si}" data-count="${s.count}" style="margin-top:10px">Show all ${s.count}</button>`:''}
+      </div>`).join('') : `<p class="muted">You haven't scored any entries yet. Once you do, your top 8 for each section will appear here.</p>`}
   </div>`;
   $('#lbBack').onclick=()=>renderJudge();
   app.querySelectorAll('[data-goto]').forEach(tr=>tr.onclick=()=>renderJudgeEntry(tr.getAttribute('data-goto')));
@@ -901,7 +901,7 @@ async function renderJudgeLeaderboard(){
     const hidden=tb.querySelectorAll('.lb-hide');
     const showing=hidden.length && hidden[0].style.display!=='none';
     hidden.forEach(r=>{ r.style.display = showing?'none':'table-row'; });
-    btn.textContent = showing ? ('Show all '+btn.getAttribute('data-count')) : 'Show top 5';
+    btn.textContent = showing ? ('Show all '+btn.getAttribute('data-count')) : 'Show top 8';
   });
 }
 
@@ -926,7 +926,7 @@ async function renderJudgeEntry(entryId){
   app.innerHTML=`<div class="wrap">
     <div class="section-title">
       <h2>${esc(e.dancer_name||'Entry')}</h2>
-      <button class="btn ghost sm" id="jeBack">← Back to Top 5</button>
+      <button class="btn ghost sm" id="jeBack">← Back to Top 8</button>
     </div>
     <div class="entry" id="jcard-${esc(e.id)}" style="max-width:640px">
       <div class="video-box">${player}</div>
@@ -968,7 +968,7 @@ async function renderAdmin(){
     <div class="section-title"><h2>Admin Results</h2>
       <span style="display:flex;gap:14px;align-items:center">
         <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · £${outstanding} outstanding · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26</span>
-        <button class="btn ghost sm" id="lbAdminBtn">🏆 Judges' top 5</button>
+        <button class="btn ghost sm" id="lbAdminBtn">🏆 Judges' top 8</button>
         <button class="btn ghost sm" id="noticeBoardBtn">📋 Notice board</button>
         <button class="btn ghost sm" id="manageJudges">Judges &amp; sections</button>
       </span></div>
@@ -1089,7 +1089,7 @@ async function renderAdmin(){
 
 // Admin view: each judge's own top 5 per section (how they scored, what they nominated).
 async function renderAdminLeaderboards(){
-  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Judges' top 5</h2></div><div class="muted">Loading…</div></div>`;
+  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Judges' top 8</h2></div><div class="muted">Loading…</div></div>`;
   let judges=[]; try{ judges=(await db.listJudges()).filter(j=>j.role==='judge'); }catch(e){}
   const rows=await db.results();
   const eById=new Map(rows.map(e=>[e.id,e]));
@@ -1100,7 +1100,7 @@ async function renderAdminLeaderboards(){
     const scored=(decByJudge[judgeId]||[]).filter(d=>decScored(d));
     const secMap=new Map();
     scored.forEach(d=>{ const e=eById.get(d.entry_id); if(!e) return; const label=`${styleGroup(e.dance_style)||'Unspecified'} ${e.category||''}`.trim(); if(!secMap.has(label)) secMap.set(label,[]); secMap.get(label).push({e,d,total:total(d)}); });
-    return [...secMap.entries()].map(([label,arr])=>({label,rows:arr.sort((a,b)=>b.total-a.total).slice(0,5),count:arr.length})).sort((a,b)=>a.label.localeCompare(b.label));
+    return [...secMap.entries()].map(([label,arr])=>({label,rows:arr.sort((a,b)=>b.total-a.total).slice(0,8),count:arr.length})).sort((a,b)=>a.label.localeCompare(b.label));
   }
   function tablesHtml(sections){
     return sections.map(s=>`
@@ -1127,7 +1127,7 @@ async function renderAdminLeaderboards(){
     return `<div style="margin-bottom:26px"><h2 style="font-size:22px;border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:14px">${esc(j.full_name)}</h2>${secs.length?tablesHtml(secs):'<p class="muted">This judge has not scored any entries yet.</p>'}</div>`;
   }
   app.innerHTML=`<div class="wrap">
-    <div class="section-title"><h2>🏆 Judges' top 5</h2>
+    <div class="section-title"><h2>🏆 Judges' top 8</h2>
       <button class="btn ghost sm" id="lbBack">← Back to results</button></div>
     <p class="muted" style="margin:-4px 0 14px">Each judge's highest-scored entries per section (their own marks), and what they nominated to perform. Showing all judges, or pick one from the dropdown. Tap a row to open the full entry.</p>
     <select id="lbJudge" style="max-width:320px;margin-bottom:16px">
