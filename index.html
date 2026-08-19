@@ -438,8 +438,13 @@ function renderHome(){
   <div class="center home-bg">
     <div style="text-align:center;max-width:620px">
       <h1 style="font-size:54px;line-height:1.05">The Dance School Awards</h1>
-      <p class="muted" style="margin:16px 0 30px;font-size:16px">
-        Celebrating the very best in dance. Enter your performance, or sign in as a judge to review entries.</p>
+      <p class="muted" style="margin:16px 0 24px;font-size:16px">
+        Celebrating the very best in dance. Enter your video for the chance to win a £22,000 scholarship, or sign in as a judge to review entries.</p>
+      <a href="#" id="cScholarship" style="display:block;text-decoration:none;background:var(--red-bg);border:1px solid var(--red);border-radius:12px;padding:18px 22px;margin:0 auto 26px;max-width:560px;text-align:center">
+        <div style="font-size:12px;letter-spacing:2px;color:#ffb4a2;text-transform:uppercase">Platinum Performing Arts Academy &nbsp;✕&nbsp; The Dance School Awards</div>
+        <div style="font-size:23px;color:#fff;font-weight:700;margin:9px 0 5px">Enter to win a £22,000 scholarship 🎓</div>
+        <div style="font-size:14px;color:#ffd9cf">Upload your video, free of charge. Tap here to enter.</div>
+      </a>
       <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
         <button class="btn" id="cEnter">Enter as a dancer</button>
         <button class="btn ghost" id="cLogin">Judge / Admin login</button>
@@ -447,6 +452,7 @@ function renderHome(){
     </div>
   </div>`;
   $('#cEnter').onclick=()=>go('enter');
+  $('#cScholarship').onclick=(e)=>{e.preventDefault();go('enter');};
   $('#cLogin').onclick=()=>go('login');
 }
 
@@ -459,11 +465,15 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the Awards</h2>
-      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:12px 14px;margin:10px 0 16px;font-size:14px;line-height:1.5;color:#ffd9cf">
-        <b style="color:#ffb4a2;font-size:15px">⚠️ Entries are now closed.</b><br>
-        Any entry submitted now will <b>not be judged</b>, and any payment taken <b>cannot be refunded</b>. Please do not submit an entry. If you have a query, please contact us at <a href="mailto:info@thedanceschoolawards.com" style="color:#ffb4a2">info@thedanceschoolawards.com</a>.
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:13px 15px;margin:10px 0 16px;font-size:14px;line-height:1.55;color:#ffd9cf">
+        <b style="color:#ffb4a2;font-size:15px">🎓 Enter your video to win a scholarship worth £22,000</b><br>
+        Upload your video for the chance to win a scholarship with <b>Platinum Performing Arts Academy</b>, worth <b>£22,000</b>. Entry is completely <b>free of charge</b>, just tick the scholarship box below when you enter. The scholarship is a place on a fully accredited performing arts qualification and is open to <b>all styles of dance</b>. Find out more at <a href="https://www.platinumacademy.co.uk/" target="_blank" rel="noopener" style="color:#ffb4a2">platinumacademy.co.uk</a> or on Instagram <b>@platinumperformingartsacademy</b>.
+        <br><br><b style="color:#ffb4a2">Already entered the Dance School Awards?</b> You do not need to film a new video, you can simply upload the same one.
       </div>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 67</span></p>
+      <details style="margin:0 0 16px;font-size:13px;color:var(--muted)"><summary style="cursor:pointer;color:#ffb4a2">What is the scholarship?</summary>
+        <div style="margin-top:8px;line-height:1.6">The scholarship is a place on a fully accredited performing arts qualification with Platinum Performing Arts Academy: the <b>UAL Level 3 Extended Diploma in Performing Arts and Production</b>, progressing to <b>Level 4</b>, followed by an <b>Industry Year</b> (which can include teaching, production, fitness, stage management or other industry pathways). The training covers all styles of dance and is designed to develop students as triple threats, so dancers of every style are welcome to enter.</div>
+      </details>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details and upload your video to enter. <span style="opacity:.5;font-size:11px">build 72</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -487,7 +497,7 @@ function renderEntryForm(){
         </div>
         <div>
           <label>Date of birth *</label><input name="date_of_birth" type="date" required>
-          <p class="muted" style="margin:5px 0 0;font-size:11.5px">For duets, trios and groups, enter the date of birth of the <b>oldest</b> dancer.</p>
+          <p class="muted" style="margin:5px 0 0;font-size:11.5px">For duets, trios and groups, enter the date of birth of the <b>oldest</b> dancer. Applicants must be <b>16 by the time the course begins</b>, so if you are 15 now but will turn 16 before then, you can still enter.</p>
         </div>
         <div>
           <label>Upload your video *</label>
@@ -512,18 +522,17 @@ function renderEntryForm(){
           </div>
         </div>
         <div id="entryMsg"></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:11px 14px">
-          <span class="muted">Entry fee <span style="font-size:11px">(set by your category)</span></span>
-          <b id="feeLabel" style="font-size:20px;color:var(--gold)">${catKnown?('£'+priceFor(urlCat)):'—'}</b>
-        </div>
-        <button class="btn" type="submit" id="entrySubmit">Submit & continue to payment</button>
+        <label style="display:flex;gap:10px;align-items:flex-start;background:var(--red-bg);border:1px solid var(--red);border-radius:8px;padding:12px 14px;cursor:pointer">
+          <input type="checkbox" id="scholarshipChk" required style="margin-top:3px;width:18px;height:18px;flex:none">
+          <span style="font-size:14px;line-height:1.5"><b style="color:#ffb4a2">I am entering for the scholarship *</b><br><span class="muted" style="font-size:12.5px">Tick to confirm you are entering for the Platinum Performing Arts Academy scholarship, worth £22,000. Entry is free of charge, so there is no payment to make.</span></span>
+        </label>
+        <button class="btn" type="submit" id="entrySubmit">Submit my scholarship entry</button>
         <button class="btn link" type="button" id="backHome">← Back</button>
       </form>
     </div>
   </div>`;
   $('#backHome').onclick=()=>go('home');
-  const feeLabel=$('#feeLabel'), catSel=$('#catSelect');
-  catSel.onchange=()=>{ feeLabel.textContent= catSel.value? '£'+priceFor(catSel.value) : '—'; };
+  const catSel=$('#catSelect');
   $('#entryForm').onsubmit=async ev=>{
     ev.preventDefault();
     const f=ev.target, data=Object.fromEntries(new FormData(f).entries());
@@ -533,7 +542,9 @@ function renderEntryForm(){
     const file=$('#videoFile').files[0];
     if(!file){ msg.innerHTML='<span class="err">Please choose your video file.</span>'; return; }
     if(file.size > 300*1024*1024){ msg.innerHTML='<span class="err">That file is over 300 MB. Please upload a smaller or compressed video.</span>'; return; }
-    const price=priceFor(data.category);
+    if(!$('#scholarshipChk').checked){ msg.innerHTML='<span class="err">Please tick the box to confirm you are entering for the scholarship.</span>'; return; }
+    const _age=ageFromDob(data.date_of_birth);
+    if(_age && _age < 15){ msg.innerHTML='<span class="err">You must be 16 by the time the course begins to enter for the scholarship. Please check the date of birth entered.</span>'; return; }
     submit.disabled=true; submit.textContent='Uploading…'; msg.innerHTML='';
     const upWrap=$('#upWrap'), upBar=$('#upBar'), upPct=$('#upPct');
     upWrap.classList.remove('hidden');
@@ -546,13 +557,13 @@ function renderEntryForm(){
       const entryId=await db.addEntry({
         dancer_name:data.dancer_name, school_name:data.school_name, category:data.category,
         dance_style:data.dance_style, date_of_birth:data.date_of_birth, email:data.email, phone:data.phone,
-        video_url:link, entry_fee:price });
+        video_url:link, entry_fee:0, voucher_code:'SCHOLARSHIP' });
       window.removeEventListener('beforeunload', warn);
-      renderPayStep(data.dancer_name, price, payUrlFor(data.category), entryId);
+      renderScholarshipDone(data.dancer_name);
     }catch(e){
       window.removeEventListener('beforeunload', warn);
       msg.innerHTML='<span class="err">'+esc(e.message)+'</span>';
-      upWrap.classList.add('hidden'); submit.disabled=false; submit.textContent='Submit & continue to payment';
+      upWrap.classList.add('hidden'); submit.disabled=false; submit.textContent='Submit my scholarship entry';
     }
   };
 }
@@ -614,6 +625,26 @@ function renderVoucherDone(name){
   </div>`;
 }
 
+function renderScholarshipDone(name){
+  const early='https://www.thedanceschoolawards.com/event-details-registration/dance-school-awards-2026';
+  app.innerHTML=`
+  <div class="center">
+    <div class="card" style="width:560px;max-width:100%;text-align:center">
+      <h2 style="font-size:30px">Good luck! 🎓</h2>
+      <p class="muted" style="margin:12px 0 8px">Thank you, ${esc(name)}. Your video has uploaded successfully and your scholarship entry is complete. There is nothing to pay.</p>
+      <p style="margin:16px 0 0;font-size:15px;line-height:1.65">The winner will be announced <b style="color:#ffb4a2">live on the night of the awards</b>. Make sure you attend to be a part of this incredible opportunity.</p>
+      <a class="btn" href="${early}" target="_blank" rel="noopener" style="margin-top:20px;display:inline-block;font-size:16px;padding:13px 26px">Get your tickets for the awards</a>
+      <p class="muted" style="margin:14px 0 0;font-size:12.5px">If early bird tickets have sold out, you can also book through the <a href="https://www.shaftesburytheatre.com/events/dance-school-awards/" target="_blank" rel="noopener" style="color:var(--gold)">Shaftesbury Theatre</a>.</p>
+      <p class="muted" style="margin:12px 0 0;font-size:12.5px">Share your entry and tag <b style="color:#ffb4a2">@platinumperformingartsacademy</b>.</p>
+      <a class="btn link" href="https://www.thedanceschoolawards.com/" style="margin-top:14px;display:inline-block">Back to The Dance School Awards</a>
+    </div>
+  </div>`;
+}
+
+// Scholarship entries are tagged with voucher_code SCHOLARSHIP and routed only to Swoosh's judging.
+function isScholarEntry(e){ return String((e&&e.voucher_code)||'').toUpperCase()==='SCHOLARSHIP'; }
+function judgeIsSwoosh(u){ return (((u&&u.name)||'')+' '+((u&&u.email)||'')).toLowerCase().includes('swoosh'); }
+
 /* ---------- Login ---------- */
 function renderLogin(){
   const emailType = LIVE ? 'email' : 'text';
@@ -664,7 +695,11 @@ async function renderJudge(){
   // Show paid entries that match this judge's allocation (style + type).
   // A judge with no rules assigned sees everything.
   const myRules = (u.assignedStyles||[]);
-  let list=entries.filter(e=>e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category));
+  const iAmSwoosh = judgeIsSwoosh(u);
+  let list=entries.filter(e=>{
+    if(isScholarEntry(e)) return iAmSwoosh;   // scholarship videos go only into Swoosh's section
+    return e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category);
+  });
   const pending=list.filter(e=>!decScored(decided.get(e.id)));
   const done=list.filter(e=>decScored(decided.get(e.id)));
 
@@ -853,7 +888,11 @@ async function renderJudgeLeaderboard(){
   const [entries,mine]=await Promise.all([db.listEntries(),db.myDecisions(u.id)]);
   const decided=new Map(mine.map(d=>[d.entry_id,d]));
   const myRules=(u.assignedStyles||[]);
-  const list=entries.filter(e=>e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category));
+  const iAmSwoosh=judgeIsSwoosh(u);
+  const list=entries.filter(e=>{
+    if(isScholarEntry(e)) return iAmSwoosh;
+    return e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category);
+  });
   const done=list.filter(e=>decScored(decided.get(e.id)));
   const myTotal = d => d ? (Number(d.score_technique)||0)+(Number(d.score_artistry)||0)+(Number(d.score_choreography)||0)+(Number(d.score_presence)||0) : 0;
   const secMap=new Map();
@@ -1106,14 +1145,15 @@ async function renderAdmin(){
   const paidRows=rows.filter(r=>r.payment_status==='paid');
   const paid=paidRows.length;
   const revenue=paidRows.reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
-  const outstanding=rows.filter(r=>r.payment_status==='unpaid').reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
+  const outstanding=rows.filter(r=>r.payment_status==='unpaid' && !isScholarEntry(r)).reduce((s,r)=>s+(Number(r.entry_fee)||0),0);
   const scoutUsed=rows.filter(r=>['SCOUTPASS26','SCOUTED26'].includes(String(r.voucher_code||'').toUpperCase())).length;
   const moveUsed=rows.filter(r=>String(r.voucher_code||'').toUpperCase()==='MOVEIT26').length;
+  const scholarCount=rows.filter(isScholarEntry).length;
 
   app.innerHTML=`<div class="wrap">
     <div class="section-title"><h2>Admin Results</h2>
       <span style="display:flex;gap:14px;align-items:center">
-        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · £${outstanding} outstanding · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26</span>
+        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · £${outstanding} outstanding · 🎓 ${scholarCount} scholarship · ${scoutUsed}/8 scout passes</span>
         <button class="btn ghost sm" id="lbAdminBtn">🏆 Judges' top 8</button>
         <button class="btn ghost sm" id="indAdminBtn">🎖️ Industry Awards</button>
         <button class="btn ghost sm" id="noticeBoardBtn">📋 Notice board</button>
@@ -1143,6 +1183,7 @@ async function renderAdmin(){
           <option value="sort:score-low">Score: lowest first</option>
         </optgroup>
         <optgroup label="Other">
+          <option value="scholarship">🎓 Scholarship entries</option>
           <option value="unscored">⏳ Awaiting scores (no judges yet)</option>
           <option value="scout">⭐ Has scout pass</option>
           <option value="perform">🎭 Selected to perform</option>
@@ -1172,6 +1213,7 @@ async function renderAdmin(){
       if(q){ const qq=q.trim().toLowerCase(); const hay=`${r.dancer_name||''} ${r.school_name||''} ${r.email||''} ${r.phone||''} ${r.category||''} ${r.dance_style||''} ${r.date_of_birth||''} ${ageFromDob(r.date_of_birth)||''} ${r.payment_status||''} ${r.voucher_code||''} ${r.scout_pass_judge_name||''}`.toLowerCase(); if(qq && !hay.includes(qq)) return false; }
       if(F.startsWith('cat:')&&r.category!==F.slice(4)) return false;
       if(F.startsWith('style:')&&r.dance_style!==F.slice(6)) return false;
+      if(F==='scholarship'&&!isScholarEntry(r)) return false;
       if(F==='scout'&&!r.scout_pass_judge_id) return false;
       if(F==='perform'&&!r.selected_to_perform) return false;
       if(F==='unscored'&&(r.num_scores||0)>0) return false;
@@ -1196,13 +1238,13 @@ async function renderAdmin(){
       const dob = r.date_of_birth ? esc(r.date_of_birth)+(ageFromDob(r.date_of_birth)?` (${ageFromDob(r.date_of_birth)})`:'') : '';
       const entered = r.created_at ? new Date(r.created_at).toLocaleDateString('en-GB') : '';
       return `<tr>
-        <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}${r.voucher_code?` <span title="Voucher used" style="color:#9fd4ff;font-size:12px;white-space:nowrap">🎟️ ${esc(r.voucher_code)}</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
+        <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}${r.voucher_code&&!isScholarEntry(r)?` <span title="Voucher used" style="color:#9fd4ff;font-size:12px;white-space:nowrap">🎟️ ${esc(r.voucher_code)}</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
         <td>${esc(r.category||'')}</td><td>${esc(r.dance_style||'')}</td><td>${dob}</td><td style="white-space:nowrap">${entered}</td>
-        <td><span class="pill ${r.payment_status}">${r.payment_status}</span></td>
+        <td>${isScholarEntry(r)?`<span class="pill" style="background:var(--red-bg);color:#ffb4a2;border:1px solid var(--red)">🎓 Scholarship</span>`:`<span class="pill ${r.payment_status}">${r.payment_status}</span>`}</td>
         <td>${avg!=null?`<b style="color:var(--gold)">${avg}</b>/100<div class="bar" style="margin-top:5px"><i style="width:${pct}%"></i></div>`:'<span class="muted">Not scored</span>'}</td>
         <td class="tally">${r.num_scores||0}</td>
         <td style="white-space:nowrap">${(r.votes_perform||0)?`<span title="Perform at show">🎭 ${r.votes_perform}</span>`:'<span class="muted">-</span>'}</td>
-        <td style="white-space:nowrap"><button class="btn ghost sm" data-view="${r.id}">View</button>${r.payment_status==='unpaid'?` <button class="btn ghost sm" data-paid="${r.id}">Mark paid</button>`:''}</td>
+        <td style="white-space:nowrap"><button class="btn ghost sm" data-view="${r.id}">View</button>${r.payment_status==='unpaid'&&!isScholarEntry(r)?` <button class="btn ghost sm" data-paid="${r.id}">Mark paid</button>`:''}</td>
       </tr>`;
     }).join('') || `<tr><td colspan="10" class="muted">No matching entries.</td></tr>`;
     tb.querySelectorAll('[data-paid]').forEach(b=>b.onclick=async()=>{await db.markPaid(b.getAttribute('data-paid'));renderAdmin();});
