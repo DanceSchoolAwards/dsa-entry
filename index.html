@@ -473,7 +473,7 @@ function renderEntryForm(){
       <details style="margin:0 0 16px;font-size:13px;color:var(--muted)"><summary style="cursor:pointer;color:#ffb4a2">What is the scholarship?</summary>
         <div style="margin-top:8px;line-height:1.6">The scholarship is a place on a fully accredited performing arts qualification with Platinum Performing Arts Academy: the <b>UAL Level 3 Extended Diploma in Performing Arts and Production</b>, progressing to <b>Level 4</b>, followed by an <b>Industry Year</b> (which can include teaching, production, fitness, stage management or other industry pathways). The training covers all styles of dance and is designed to develop students as triple threats, so dancers of every style are welcome to enter.</div>
       </details>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details and upload your video to enter. <span style="opacity:.5;font-size:11px">build 72</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details and upload your video to enter. <span style="opacity:.5;font-size:11px">build 73</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -632,10 +632,14 @@ function renderScholarshipDone(name){
     <div class="card" style="width:560px;max-width:100%;text-align:center">
       <h2 style="font-size:30px">Good luck! 🎓</h2>
       <p class="muted" style="margin:12px 0 8px">Thank you, ${esc(name)}. Your video has uploaded successfully and your scholarship entry is complete. There is nothing to pay.</p>
-      <p style="margin:16px 0 0;font-size:15px;line-height:1.65">The winner will be announced <b style="color:#ffb4a2">live on the night of the awards</b>. Make sure you attend to be a part of this incredible opportunity.</p>
-      <a class="btn" href="${early}" target="_blank" rel="noopener" style="margin-top:20px;display:inline-block;font-size:16px;padding:13px 26px">Get your tickets for the awards</a>
-      <p class="muted" style="margin:14px 0 0;font-size:12.5px">If early bird tickets have sold out, you can also book through the <a href="https://www.shaftesburytheatre.com/events/dance-school-awards/" target="_blank" rel="noopener" style="color:var(--gold)">Shaftesbury Theatre</a>.</p>
-      <p class="muted" style="margin:12px 0 0;font-size:12.5px">Share your entry and tag <b style="color:#ffb4a2">@platinumperformingartsacademy</b>.</p>
+      <p style="margin:16px 0 0;font-size:15px;line-height:1.65">The winner will be announced <b style="color:#ffb4a2">live on the night of the awards</b>.</p>
+      <div style="background:var(--red-bg);border:1px solid var(--red);border-radius:10px;padding:18px 20px;margin:20px 0 0">
+        <div style="font-size:17px;color:#fff;font-weight:700;margin-bottom:6px">You need to be in the room 🎟️</div>
+        <p style="margin:0 0 14px;font-size:14px;line-height:1.55;color:#ffd9cf">The scholarship is announced live on the night, so make sure you are there to be part of this incredible opportunity. Last year tickets sold out incredibly quickly, so book early to avoid missing out.</p>
+        <a class="btn" href="${early}" target="_blank" rel="noopener" style="display:inline-block;font-size:16px;padding:13px 28px">Buy your tickets now</a>
+        <p class="muted" style="margin:12px 0 0;font-size:12.5px">If early bird tickets have sold out, book through the <a href="https://www.shaftesburytheatre.com/events/dance-school-awards/" target="_blank" rel="noopener" style="color:#ffb4a2">Shaftesbury Theatre</a>.</p>
+      </div>
+      <p class="muted" style="margin:14px 0 0;font-size:12.5px">Share your entry and tag <b style="color:#ffb4a2">@platinumperformingartsacademy</b>.</p>
       <a class="btn link" href="https://www.thedanceschoolawards.com/" style="margin-top:14px;display:inline-block">Back to The Dance School Awards</a>
     </div>
   </div>`;
