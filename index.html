@@ -473,7 +473,7 @@ function renderEntryForm(){
       <details style="margin:0 0 16px;font-size:13px;color:var(--muted)"><summary style="cursor:pointer;color:#ffb4a2">What is the scholarship?</summary>
         <div style="margin-top:8px;line-height:1.6">The scholarship is a place on a fully accredited performing arts qualification with Platinum Performing Arts Academy: the <b>UAL Level 3 Extended Diploma in Performing Arts and Production</b>, progressing to <b>Level 4</b>, followed by an <b>Industry Year</b> (which can include teaching, production, fitness, stage management or other industry pathways). The training covers all styles of dance and is designed to develop students as triple threats, so dancers of every style are welcome to enter.</div>
       </details>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details and upload your video to enter. <span style="opacity:.5;font-size:11px">build 73</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details and upload your video to enter. <span style="opacity:.5;font-size:11px">build 74</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -645,9 +645,11 @@ function renderScholarshipDone(name){
   </div>`;
 }
 
-// Scholarship entries are tagged with voucher_code SCHOLARSHIP and routed only to Swoosh's judging.
+// Scholarship entries are tagged with voucher_code SCHOLARSHIP and routed only to the scholarship judges below.
 function isScholarEntry(e){ return String((e&&e.voucher_code)||'').toUpperCase()==='SCHOLARSHIP'; }
-function judgeIsSwoosh(u){ return (((u&&u.name)||'')+' '+((u&&u.email)||'')).toLowerCase().includes('swoosh'); }
+// Judges allowed to score scholarship entries, matched by name or email (case-insensitive). Add more keywords here to add judges.
+const SCHOLARSHIP_JUDGES = ['swoosh','marlon','anna morgan','morgan'];
+function judgeScoresScholarship(u){ const s=(((u&&u.name)||'')+' '+((u&&u.email)||'')).toLowerCase(); return SCHOLARSHIP_JUDGES.some(k=>s.includes(k)); }
 
 /* ---------- Login ---------- */
 function renderLogin(){
@@ -699,7 +701,7 @@ async function renderJudge(){
   // Show paid entries that match this judge's allocation (style + type).
   // A judge with no rules assigned sees everything.
   const myRules = (u.assignedStyles||[]);
-  const iAmSwoosh = judgeIsSwoosh(u);
+  const iAmSwoosh = judgeScoresScholarship(u);
   let list=entries.filter(e=>{
     if(isScholarEntry(e)) return iAmSwoosh;   // scholarship videos go only into Swoosh's section
     return e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category);
@@ -892,7 +894,7 @@ async function renderJudgeLeaderboard(){
   const [entries,mine]=await Promise.all([db.listEntries(),db.myDecisions(u.id)]);
   const decided=new Map(mine.map(d=>[d.entry_id,d]));
   const myRules=(u.assignedStyles||[]);
-  const iAmSwoosh=judgeIsSwoosh(u);
+  const iAmSwoosh=judgeScoresScholarship(u);
   const list=entries.filter(e=>{
     if(isScholarEntry(e)) return iAmSwoosh;
     return e.payment_status==='paid' && ruleMatches(myRules, e.dance_style, e.category);
