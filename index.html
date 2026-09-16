@@ -461,7 +461,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the 2027 Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 76</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 77</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -1248,16 +1248,20 @@ async function renderAdmin(){
     app.querySelectorAll('[data-f]').forEach(x=>x.classList.remove('active'));
     t.classList.add('active'); filter=t.getAttribute('data-f'); adminState.filter=filter; paint();
   });
-  $('#exportBtn').onclick=()=>{
-    const head=['Dancer','School','Email','Phone','Category','Style','DOB','Payment','Voucher','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
-    const lines=[head.join(',')].concat(rows.map(r=>[
+  $('#exportBtn').onclick=async ()=>{
+    const btn=$('#exportBtn'); const orig=btn.textContent; btn.textContent='Preparing…'; btn.disabled=true;
+    const extra={}; try{ (await db.listEntries()).forEach(e=>{ extra[e.id]=e; }); }catch(err){}
+    const head=['Dancer','School','Email','Phone','Category','Style','DOB','Instagram','TikTok','Teacher/Principal','Guardian','GuardianContact','HeardAbout','MediaConsent','Payment','Voucher','ScoutPass','SelectedToPerform','AvgScore','JudgesScored','PerformNoms'];
+    const lines=[head.join(',')].concat(rows.map(r=>{ const e=extra[r.id]||{}; return [
       r.dancer_name,r.school_name,r.email,r.phone,r.category,r.dance_style,r.date_of_birth,
+      e.instagram||'',e.tiktok||'',e.teacher_name||'',e.guardian_name||'',e.guardian_contact||'',e.heard_about||'',e.media_consent?'Yes':'',
       r.payment_status,r.voucher_code||'',r.scout_pass_judge_name||'',r.selected_to_perform?'Yes':'',
       r.avg_total!=null?r.avg_total:'',r.num_scores||0,r.votes_perform||0
-    ].map(v=>`"${(v==null?'':v).toString().replace(/"/g,'""')}"`).join(',')));
+    ].map(v=>`"${(v==null?'':v).toString().replace(/"/g,'""')}"`).join(','); }));
     const blob=new Blob([lines.join('\n')],{type:'text/csv'});
     const a=document.createElement('a');a.href=URL.createObjectURL(blob);
     a.download='dance-school-awards-results.csv';a.click();
+    btn.textContent=orig; btn.disabled=false;
   };
   $('#manageJudges').onclick=()=>renderJudgesAdmin();
   $('#noticeBoardBtn').onclick=()=>renderNoticeBoard();
