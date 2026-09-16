@@ -203,6 +203,7 @@ function makeSupabaseDB(){
     async updateJudge(id,patch){ const {error}=await sb.from('profiles').update(patch).eq('id',id); if(error) throw error; },
     async addEntry(e){ const id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g,c=>{const r=Math.random()*16|0;return (c==='x'?r:(r&0x3|0x8)).toString(16);}); const {error}=await sb.from('entries').insert({id,...e}); if(error) throw error; return id; },
     async listEntries(){ const {data,error}=await sb.from('entries').select('*').order('created_at',{ascending:false}); if(error) throw error; return data; },
+    async getEntry(id){ const {data,error}=await sb.from('entries').select('*').eq('id',id).single(); if(error) return null; return data; },
     async myDecisions(judgeId){ const {data,error}=await sb.from('decisions').select('*').eq('judge_id',judgeId); if(error) throw error; return data; },
     async setScore(entryId,judgeId,scores,notes,performShow){
       const {error}=await sb.from('decisions').upsert(
@@ -280,6 +281,7 @@ function makeDemoDB(){
     async updateJudge(id,patch){ const u=users.find(x=>x.id===id); if(u){ if(patch.full_name!=null)u.name=patch.full_name; if(patch.assigned_styles!=null)u.assigned_styles=patch.assigned_styles; } },
     async addEntry(e){ const id=uid(); entries.unshift({id,created_at:Date.now(),payment_status:'unpaid',entry_fee:ENTRY_FEE,...e}); return id; },
     async listEntries(){ return [...entries]; },
+    async getEntry(id){ return entries.find(x=>x.id===id)||null; },
     async myDecisions(judgeId){ return decisions.filter(d=>d.judge_id===judgeId); },
     async setScore(entryId,judgeId,scores,notes,performShow){
       const ex=decisions.find(d=>d.entry_id===entryId&&d.judge_id===judgeId);
@@ -459,7 +461,7 @@ function renderEntryForm(){
   <div class="center enter-bg">
     <div class="card" style="width:560px;max-width:100%">
       <h2 style="font-size:30px">Enter the 2027 Awards</h2>
-      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 75</span></p>
+      <p class="muted" style="margin:6px 0 18px">Fill in your details, upload your video, then continue to payment. <span style="opacity:.5;font-size:11px">build 76</span></p>
       <form id="entryForm" class="stack">
         <div class="row">
           <div><label>Dancer / group name *</label><input name="dancer_name" required></div>
@@ -485,6 +487,29 @@ function renderEntryForm(){
           <label>Date of birth *</label><input name="date_of_birth" type="date" required>
           <p class="muted" style="margin:5px 0 0;font-size:11.5px">For duets, trios and groups, enter the date of birth of the <b>oldest</b> dancer.</p>
         </div>
+        <div class="row">
+          <div><label>Instagram *</label><input name="instagram" required placeholder="@yourhandle"></div>
+          <div><label>TikTok</label><input name="tiktok" placeholder="@yourhandle"></div>
+        </div>
+        <div><label>Dance teacher / principal name</label><input name="teacher_name"></div>
+        <div class="row">
+          <div><label>Parent / guardian name</label><input name="guardian_name"></div>
+          <div><label>Parent / guardian contact</label><input name="guardian_contact" placeholder="Email or phone"></div>
+        </div>
+        <p class="muted" style="margin:-6px 0 0;font-size:11.5px">Please complete the parent or guardian details if the dancer is under 18.</p>
+        <div><label>How did you hear about us?</label>
+          <select name="heard_about">
+            <option value="" selected>Choose one</option>
+            <option>Instagram</option>
+            <option>TikTok</option>
+            <option>Facebook</option>
+            <option>Friend or teacher</option>
+            <option>Our dance school</option>
+            <option>Google or search</option>
+            <option>Entered before</option>
+            <option>Other</option>
+          </select>
+        </div>
         <div>
           <label>Upload your video *</label>
           <input type="file" id="videoFile" accept="video/*" required>
@@ -508,6 +533,10 @@ function renderEntryForm(){
           </div>
         </div>
         <div id="entryMsg"></div>
+        <label style="display:flex;gap:10px;align-items:flex-start;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer">
+          <input type="checkbox" id="mediaConsent" required style="margin-top:3px;width:18px;height:18px;flex:none">
+          <span style="font-size:13px;line-height:1.5">I give permission for this video and any photos to be used by The Dance School Awards and Platinum Performing Arts Academy on social media and in marketing. *</span>
+        </label>
         <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:11px 14px">
           <span class="muted">Entry fee <span style="font-size:11px">(set by your category)</span></span>
           <b id="feeLabel" style="font-size:20px;color:var(--gold)">${catKnown?('£'+priceFor(urlCat)):'—'}</b>
@@ -529,6 +558,8 @@ function renderEntryForm(){
     const file=$('#videoFile').files[0];
     if(!file){ msg.innerHTML='<span class="err">Please choose your video file.</span>'; return; }
     if(file.size > 300*1024*1024){ msg.innerHTML='<span class="err">That file is over 300 MB. Please upload a smaller or compressed video.</span>'; return; }
+    if(!data.instagram || !data.instagram.trim()){ msg.innerHTML='<span class="err">Please add your Instagram handle.</span>'; return; }
+    if(!$('#mediaConsent').checked){ msg.innerHTML='<span class="err">Please tick the media permission box to continue.</span>'; return; }
     const price=priceFor(data.category);
     submit.disabled=true; submit.textContent='Uploading…'; msg.innerHTML='';
     const upWrap=$('#upWrap'), upBar=$('#upBar'), upPct=$('#upPct');
@@ -542,6 +573,9 @@ function renderEntryForm(){
       const entryId=await db.addEntry({
         dancer_name:data.dancer_name, school_name:data.school_name, category:data.category,
         dance_style:data.dance_style, date_of_birth:data.date_of_birth, email:data.email, phone:data.phone,
+        instagram:(data.instagram||'').trim(), tiktok:(data.tiktok||'').trim(),
+        teacher_name:(data.teacher_name||'').trim(), guardian_name:(data.guardian_name||'').trim(),
+        guardian_contact:(data.guardian_contact||'').trim(), heard_about:data.heard_about||'', media_consent:true,
         video_url:link, entry_fee:price });
       window.removeEventListener('beforeunload', warn);
       renderPayStep(data.dancer_name, price, payUrlFor(data.category), entryId);
@@ -1296,6 +1330,7 @@ async function renderAdminLeaderboards(){
 /* ---------- Admin: full entry view (video, details + each judge's scores) ---------- */
 async function renderAdminEntry(r){
   if(!r){ renderAdmin(); return; }
+  try{ const raw=await db.getEntry(r.id); if(raw) r={...r, ...raw}; }catch(e){}
   const src=dropboxEmbed(r.video_url);
   const player= isVideoFile(r.video_url)
     ? `<video controls preload="metadata" src="${esc(src)}" style="width:100%;display:block;background:#000"></video>`
@@ -1310,6 +1345,13 @@ async function renderAdminEntry(r){
     ['Date of birth', r.date_of_birth ? r.date_of_birth+(age?` (age ${age})`:'') : ''],
     ['Email', r.email],
     ['Phone', r.phone],
+    ['Instagram', r.instagram||'—'],
+    ['TikTok', r.tiktok||'—'],
+    ['Dance teacher / principal', r.teacher_name||'—'],
+    ['Parent / guardian', r.guardian_name||'—'],
+    ['Guardian contact', r.guardian_contact||'—'],
+    ['Heard about us', r.heard_about||'—'],
+    ['Media consent', r.media_consent?'✅ Yes':'—'],
     ['Entry fee', r.entry_fee!=null?'£'+r.entry_fee:''],
     ['Payment', r.payment_status],
     ['Voucher used', r.voucher_code||'—'],
