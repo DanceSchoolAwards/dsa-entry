@@ -49,6 +49,8 @@
   .pill{display:inline-block;font-size:11px;letter-spacing:.5px;text-transform:uppercase;padding:3px 9px;border-radius:20px;border:1px solid var(--line)}
   .pill.paid{color:var(--green);border-color:var(--green)}
   .pill.unpaid{color:var(--muted)}
+  .pill.awaiting{color:#e7cf91;border-color:#8a6d2f}
+  .pill.notpaid{color:#e8a394;border-color:var(--red)}
   .pill.through{background:var(--green-bg);color:#8fe0ab;border-color:var(--green)}
   .pill.notthrough{background:var(--red-bg);color:#e8a394;border-color:var(--red)}
   .banner{background:#241d09;border:1px solid var(--gold);color:var(--gold-soft);
@@ -58,6 +60,10 @@
   .hidden{display:none!important}
   .section-title{display:flex;align-items:baseline;justify-content:space-between;margin:26px 0 14px}
   .section-title h2{font-size:30px}
+  .admin-stats{display:flex;flex-wrap:wrap;gap:10px;margin:0 0 18px}
+  .admin-stat{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:10px 12px;flex:1 1 0;min-width:84px}
+  .admin-stat b{display:block;font-size:20px;color:var(--gold);font-weight:500;line-height:1.2}
+  .admin-stat span{display:block;font-size:11.5px;color:var(--muted);margin-top:2px;line-height:1.3}
   .tabs{display:flex;gap:8px;margin-top:6px}
   .tab{padding:8px 16px;border-radius:20px;background:var(--panel);border:1px solid var(--line);color:var(--muted);font-size:13px}
   .tab.active{background:var(--gold);color:#1a1407;border-color:var(--gold)}
@@ -169,6 +175,16 @@ function discountFor(code, category){
   return {code:key, pct:d.pct, fee, payUrl:PAYLINK_BASE+linkCode};
 }
 function fmtFee(n){ return Number.isInteger(n) ? String(n) : n.toFixed(2); }
+// Unpaid entries are split in two: "Awaiting payment" if they clicked Pay now or entered in the last 48 hours, otherwise "Didn't pay".
+const AWAIT_HOURS = 48;
+function payState(r){
+  if(!r || r.payment_status==='paid') return 'paid';
+  const t=r.created_at?new Date(r.created_at).getTime():0;
+  if(r.pay_clicked_at || (t && Date.now()-t < AWAIT_HOURS*3600000)) return 'awaiting';
+  return 'notpaid';
+}
+const PAY_LABEL={paid:'Paid', awaiting:'Awaiting payment', notpaid:"Didn't pay"};
+function payPill(r){ const st=payState(r); return `<span class="pill ${st==='paid'?'paid':st==='awaiting'?'awaiting':'notpaid'}" style="white-space:nowrap">${PAY_LABEL[st]}</span>`; }
 
 // Sam Stanley Creative Associates Scholarship (6 months, age 14+). Entered through the
 // portal as a Solo / International Solo entry that is also flagged for the scholarship.
@@ -187,6 +203,12 @@ const INDUSTRY_CATS=["Dance Teacher of the Year","Dance School of the Year"];
 const INDUSTRY_CRITERIA={"Dance Teacher of the Year": ["Quality and clarity of teaching practice", "Ability to motivate, inspire and support students", "Awareness of different learning needs and pathways", "Commitment to student wellbeing and safe practice", "Professional integrity, reliability and ongoing development", "Positive impact within their school or community", "Inclusive and respectful teaching practice", "A clear case for why this teacher stands out this year"], "Dance School of the Year": ["Clear, specific achievements from the past year", "Positive impact on students, staff or the wider community", "A clearly articulated ethos and set of values", "Thoughtful support for students with different goals", "Clear safeguarding and student wellbeing in everyday practice", "Commitment to equity, diversity and inclusion", "Strong leadership and professional standards", "A compelling overall case for why the school stands out"]};
 const INDUSTRY_NOMINEES=[{"id": "ind1", "name": "Angela Taylor", "category": "Dance School of the Year", "email": "steppinout@me.com", "pdf": "industry/ind1.pdf"}, {"id": "ind2", "name": "Charlie Gray", "category": "Dance School of the Year", "email": "charlie@dancereality.co.uk", "pdf": "industry/ind2.pdf"}, {"id": "ind3", "name": "Eleanor Clark", "category": "Dance School of the Year", "email": "eleanorclark05@gmail.com", "pdf": "industry/ind3.pdf"}, {"id": "ind4", "name": "Georgina Esson", "category": "Dance School of the Year", "email": "maggiemonkdance@gmail.com", "pdf": "industry/ind4.pdf"}, {"id": "ind5", "name": "Jiji Batten & Emily Broadway", "category": "Dance School of the Year", "email": "contactjijiandemi@gmail.com", "pdf": "industry/ind5.pdf"}, {"id": "ind6", "name": "Louise Cannon", "category": "Dance School of the Year", "email": "l.cannon@wells-cathedral-school.com", "pdf": "industry/ind6.pdf"}, {"id": "ind7", "name": "Lynsey Gordon", "category": "Dance School of the Year", "email": "lynseybritton@googlemail.com", "pdf": "industry/ind7.pdf"}, {"id": "ind8", "name": "Mia Beaney", "category": "Dance School of the Year", "email": "contact@fundamentalz.co.uk", "pdf": "industry/ind8.pdf"}, {"id": "ind9", "name": "Sam Bell and Fiona Forfar", "category": "Dance School of the Year", "email": "fiona@ellitestudios.co.uk", "pdf": "industry/ind9.pdf"}, {"id": "ind10", "name": "Stacey Tara White", "category": "Dance School of the Year", "email": "staceyt.whiteschoolofdance@gmail.com", "pdf": "industry/ind10.pdf"}, {"id": "ind11", "name": "Sander Blommaert", "category": "Dance School of the Year", "email": "blommaertballetschool@gmail.com", "pdf": "industry/ind11.pdf"}, {"id": "ind12", "name": "Amanda Schofield", "category": "Dance Teacher of the Year", "email": "kreynolds@brightoncollege.net", "pdf": "industry/ind12.pdf"}, {"id": "ind13", "name": "Claire Jiggins", "category": "Dance Teacher of the Year", "email": "valentineschool@icloud.com", "pdf": "industry/ind13.pdf"}, {"id": "ind14", "name": "Eleanor Clark", "category": "Dance Teacher of the Year", "email": "eleanorclark05@gmail.com", "pdf": "industry/ind14.pdf"}, {"id": "ind15", "name": "Kathryn Edkins", "category": "Dance Teacher of the Year", "email": "k.edkins@hotmail.co.uk", "pdf": "industry/ind15.pdf"}, {"id": "ind16", "name": "Sander Blommaert", "category": "Dance Teacher of the Year", "email": "blommaertballetschool@gmail.com", "pdf": "industry/ind16.pdf"}, {"id": "ind17", "name": "Sophie Tolley", "category": "Dance Teacher of the Year", "email": "joyinmotion_mtdance@hotmail.com", "pdf": "industry/ind17.pdf"}];
 
+
+// Industry Creative entries (company / professional entries, separate from dancer entries).
+const IC_AWARDS = ["Dance School of the Year","Dance Teacher / Choreographer","Dance Competition","The Tired Movement Award","Most Influential Industry Creative","Lifetime Achievement Awards"];
+const IC_FEE = 25;
+const IC_PAY_CODE = "D1TRvzjhFaLf";   // Wix pay link "INDUSTRY CREATIVE ENTRY", £25
+function icPayUrl(){ return IC_PAY_CODE ? PAYLINK_BASE + IC_PAY_CODE : ""; }
 
 const CATEGORIES   = ["Solo","Duet","Trios & Quartets","Group","International Solo","International Group"];
 const STYLES       = ["Ballet","Character","Contemporary","Lyrical","Commercial & Street","Jazz","Modern","Acro","Tap","Musical Theatre","Latin & Ballroom"];
@@ -269,6 +291,11 @@ function makeSupabaseDB(){
     async setScoutPass(entryId,judgeId,judgeName){ const {data,error}=await sb.from('entries').update({scout_pass_judge_id:judgeId,scout_pass_judge_name:judgeName}).eq('id',entryId).is('scout_pass_judge_id',null).select('id'); if(error) throw error; return !!(data&&data.length); },
     async clearScoutPass(entryId,judgeId){ let q=sb.from('entries').update({scout_pass_judge_id:null,scout_pass_judge_name:null}).eq('id',entryId); if(judgeId) q=q.eq('scout_pass_judge_id',judgeId); const {error}=await q; if(error) throw error; },
     async adminSetScoutPass(entryId,judgeId,judgeName){ const {error}=await sb.from('entries').update({scout_pass_judge_id:judgeId||null,scout_pass_judge_name:judgeName||null}).eq('id',entryId); if(error) throw error; },
+    async markPayClicked(id){ try{ await sb.rpc('mark_pay_clicked',{p_id:id}); }catch(e){} },
+    async markIcPayClicked(id){ try{ await sb.rpc('mark_ic_pay_clicked',{p_id:id}); }catch(e){} },
+    async addIndustryCreative(e){ const id=(self.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now()); const {error}=await sb.from('industry_creative_entries').insert({id,...e}); if(error) throw error; return id; },
+    async listIndustryCreatives(){ const {data,error}=await sb.from('industry_creative_entries').select('*').order('created_at',{ascending:false}); if(error) throw error; return data||[]; },
+    async markIndustryCreativePaid(id){ const {error}=await sb.from('industry_creative_entries').update({payment_status:'paid'}).eq('id',id); if(error) throw error; },
     async getNotices(){ const {data,error}=await sb.from('app_settings').select('value').eq('key','notice_board').limit(1); if(error) throw error; const row=data&&data[0]; return (row&&row.value&&row.value.items)||[]; },
     async saveNotices(items){ const {error}=await sb.from('app_settings').upsert({key:'notice_board',value:{items},updated_at:new Date().toISOString()},{onConflict:'key'}); if(error) throw error; },
   };
@@ -345,6 +372,11 @@ function makeDemoDB(){
     async setIndustryVote(judgeId,category,nominee,comments){ let v=industryVotes.find(x=>x.judge_id===judgeId&&x.category===category); if(v){ v.nominee=nominee; v.comments=comments; } else industryVotes.push({judge_id:judgeId,category,nominee,comments}); },
     async allIndustryVotes(){ return industryVotes.map(v=>{ const j=users.find(u=>u.id===v.judge_id); return {...v, judge_name:j?j.name:'Judge'}; }); },
     async markPaid(entryId){ const e=entries.find(x=>x.id===entryId); if(e)e.payment_status='paid'; },
+    async markPayClicked(id){ const e=entries.find(x=>x.id===id); if(e&&!e.pay_clicked_at) e.pay_clicked_at=new Date().toISOString(); },
+    async markIcPayClicked(id){ const e=(this._ic||[]).find(x=>x.id===id); if(e&&!e.pay_clicked_at) e.pay_clicked_at=new Date().toISOString(); },
+    async addIndustryCreative(e){ const id='ic'+Date.now(); (this._ic=this._ic||[]).unshift({id,created_at:new Date().toISOString(),payment_status:'unpaid',...e}); return id; },
+    async listIndustryCreatives(){ return this._ic||[]; },
+    async markIndustryCreativePaid(id){ const e=(this._ic||[]).find(x=>x.id===id); if(e) e.payment_status='paid'; },
     async updateEntry(entryId,fields){ const e=entries.find(x=>x.id===entryId); if(e)Object.assign(e,fields); },
     async deleteEntry(entryId){ const i=entries.findIndex(x=>x.id===entryId); if(i>=0)entries.splice(i,1); for(let k=decisions.length-1;k>=0;k--) if(decisions[k].entry_id===entryId) decisions.splice(k,1); },
     async setScoutPass(entryId,judgeId,judgeName){ const e=entries.find(x=>x.id===entryId); if(e&&!e.scout_pass_judge_id){e.scout_pass_judge_id=judgeId;e.scout_pass_judge_name=judgeName;return true;} return false; },
@@ -464,11 +496,13 @@ function go(view){ state.view=view; render(); }
    ================================================================= */
 async function render(){
   await refreshUser();
+  if(!state._icLink){ state._icLink=true; if(/^industry/i.test(new URLSearchParams(location.search).get('entry')||'') && !state.user) state.view='industry'; }
   if(state.user){
     if(state.user.role==='admin') return renderAdmin();
     return renderJudge();
   }
   if(state.view==='enter')  return renderEntryForm();
+  if(state.view==='industry') return renderIndustryCreativeForm();
   if(state.view==='login')  return renderLogin();
   return renderHome();
 }
@@ -482,11 +516,13 @@ function renderHome(){
         Celebrating the very best in dance at the 2027 awards. Enter your performance, or sign in as a judge to review entries.</p>
       <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap">
         <button class="btn" id="cEnter">Enter as a dancer</button>
+        <button class="btn" id="cIndustry">Industry Creative Entry</button>
         <button class="btn ghost" id="cLogin">Judge / Admin login</button>
       </div>
     </div>
   </div>`;
   $('#cEnter').onclick=()=>go('enter');
+  $('#cIndustry').onclick=()=>go('industry');
   $('#cLogin').onclick=()=>go('login');
 }
 
@@ -694,11 +730,150 @@ function renderEntryForm(){
   };
 }
 
+
+/* ---------- Industry Creative entry form ---------- */
+function renderIndustryCreativeForm(){
+  app.innerHTML=`
+  <div class="center enter-bg">
+    <div class="card" style="width:600px;max-width:100%">
+      <p style="margin:0;font-size:12px;letter-spacing:.12em;color:var(--gold-soft)">THE DANCE SCHOOL AWARDS 2027</p>
+      <h2 style="font-size:30px;margin-top:4px">Industry Creatives Entry Form</h2>
+      <div style="margin:14px 0 18px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:14px 16px;font-size:13px;line-height:1.6">
+        <b style="color:var(--gold-soft)">Here’s how to enter:</b>
+        <ol style="margin:8px 0 0;padding-left:20px">
+          <li><b>Pick your category.</b> You can enter multiple categories on separate entries.</li>
+          <li><b>Share your achievements.</b> Tell us what makes you stand out.</li>
+          <li><b>Enter for £${IC_FEE} per category.</b> Complete payment to confirm your entry.</li>
+          <li><b>Confirmation.</b> We’ll email you once your entry is accepted.</li>
+          <li>Tag us in your posts on Instagram so we can see your achievements.</li>
+          <li>Only successful applicants will be notified.</li>
+          <li><b>Celebrate in style.</b> Join us on the red carpet in London on 5 September 2027.</li>
+        </ol>
+        <p style="margin:10px 0 0">🗓️ <b>Entries close June 2027</b></p>
+      </div>
+      <form id="icForm" class="stack">
+        <div class="row">
+          <div><label>Company name *</label><input name="company_name" required></div>
+          <div><label>Full name *</label><input name="full_name" required></div>
+        </div>
+        <div class="row">
+          <div><label>Email address *</label><input name="email" type="email" required></div>
+          <div><label>Phone *</label><input name="phone" type="tel" required></div>
+        </div>
+        <div><label>Link to your Instagram page *</label><input name="instagram" required placeholder="https://www.instagram.com/yourpage"></div>
+        <div>
+          <label>Which award are you applying for? (pick one) *</label>
+          <div id="icAwards" style="display:grid;gap:8px;margin-top:4px">
+            ${IC_AWARDS.map((a,i)=>`<label style="display:flex;gap:10px;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:10px 14px;cursor:pointer;margin:0">
+              <input type="checkbox" class="icAward" value="${esc(a)}" style="width:18px;height:18px;flex:none;margin:0">
+              <span style="font-size:14px;text-transform:none;letter-spacing:0;color:var(--text)">${esc(a)}</span></label>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label>Tell us a bit about you *</label>
+          <textarea name="about" required rows="6" style="width:100%;resize:vertical"></textarea>
+          <p class="muted" style="margin:5px 0 0;font-size:11.5px">Additional questions to follow.</p>
+        </div>
+        <div id="icMsg"></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:11px 14px">
+          <span class="muted">Entry fee, per category</span>
+          <b style="font-size:20px;color:var(--gold)">£${IC_FEE}</b>
+        </div>
+        <button class="btn" type="submit" id="icSubmit">Submit & continue to payment</button>
+        <button class="btn link" type="button" id="icBack">← Back</button>
+      </form>
+    </div>
+  </div>`;
+  $('#icBack').onclick=()=>go('home');
+  // Tick boxes that behave as "pick one"
+  const boxes=[...app.querySelectorAll('.icAward')];
+  boxes.forEach(b=>b.onchange=()=>{ if(b.checked) boxes.forEach(o=>{ if(o!==b) o.checked=false; }); });
+  $('#icForm').onsubmit=async ev=>{
+    ev.preventDefault();
+    const data=Object.fromEntries(new FormData(ev.target).entries());
+    const msg=$('#icMsg'), submit=$('#icSubmit');
+    const award=(boxes.find(b=>b.checked)||{}).value||'';
+    if(!award){ msg.innerHTML='<span class="err">Please tick the award you are applying for.</span>'; return; }
+    if(!(data.about||'').trim()){ msg.innerHTML='<span class="err">Please tell us a bit about you.</span>'; return; }
+    submit.disabled=true; submit.textContent='Saving…'; msg.innerHTML='';
+    try{
+      const id=await db.addIndustryCreative({
+        company_name:data.company_name.trim(), full_name:data.full_name.trim(), email:data.email.trim(),
+        phone:data.phone.trim(), instagram:data.instagram.trim(), award, about:data.about.trim(),
+        entry_fee:IC_FEE, payment_status:'unpaid' });
+      renderIndustryCreativePay(data.full_name.trim(), award, id);
+    }catch(e){
+      msg.innerHTML='<span class="err">Sorry, we couldn’t save your entry. Please try again or email info@thedanceschoolawards.com.</span>';
+      submit.disabled=false; submit.textContent='Submit & continue to payment';
+    }
+  };
+}
+function renderIndustryCreativePay(name, award, id){
+  const url=icPayUrl();
+  app.innerHTML=`
+  <div class="center">
+    <div class="card" style="width:520px;max-width:100%;text-align:center">
+      <h2 style="font-size:30px">Payment required</h2>
+      <p class="muted" style="margin:12px 0 8px">Thank you, ${esc(name)}, your entry for <b>${esc(award)}</b> has been received.</p>
+      <p style="margin:0 0 20px;font-size:15px;line-height:1.55"><b style="color:var(--gold-soft)">To complete your entry, please pay the £${IC_FEE} fee below.</b> Your entry isn’t confirmed until payment is made.</p>
+      ${url?`<a class="btn" id="icPayBtn" href="${url}" target="_blank" rel="noopener" style="font-size:16px;padding:14px 26px">Pay £${IC_FEE} now to complete your entry</a>`
+           :`<p class="muted">We’ll email you a link to pay your £${IC_FEE} entry fee.</p>`}
+      <p class="muted" style="margin:16px 0 0;font-size:12px">Entering another category? Each one is a separate entry.</p>
+      <button class="btn link" id="icAnother" style="margin-top:6px">Enter another category</button>
+    </div>
+  </div>`;
+  $('#icAnother').onclick=()=>go('industry');
+  if(id && $('#icPayBtn')) $('#icPayBtn').addEventListener('click',()=>{ db.markIcPayClicked(id); });
+}
+
+/* ---------- Admin: Industry Creative entries ---------- */
+async function renderIndustryCreativesAdmin(){
+  app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Industry Creative entries</h2></div><div class="muted">Loading…</div></div>`;
+  let rows=[];
+  try{ rows=await db.listIndustryCreatives(); }
+  catch(e){ app.innerHTML=`<div class="wrap"><div class="section-title"><h2>Industry Creative entries</h2><button class="btn ghost sm" id="icaBack">← Back to results</button></div><p class="err">Couldn’t load the entries: ${esc(e.message||'')}</p></div>`; $('#icaBack').onclick=()=>renderAdmin(); return; }
+  let f='';
+  const paint=()=>{
+    const list=f?rows.filter(r=>r.award===f):rows;
+    const paid=rows.filter(r=>r.payment_status==='paid').length, aw=rows.filter(r=>payState(r)==='awaiting').length, np=rows.filter(r=>payState(r)==='notpaid').length;
+    app.innerHTML=`<div class="wrap">
+      <div class="section-title" style="align-items:center"><h2 style="white-space:nowrap">✍️ Industry Creative entries</h2>
+        <span style="display:flex;gap:10px;align-items:center">
+        <button class="btn ghost sm" id="icaCsv">Export CSV</button>
+        <button class="btn ghost sm" id="icaBack">← Back to results</button></span></div>
+      <div class="admin-stats">${[[rows.length,'entries'],[paid,'paid'],[aw,'awaiting payment'],[np,"didn't pay"]].map(([n,l])=>`<div class="admin-stat" style="flex:0 0 auto;min-width:120px"><b>${n}</b><span>${l}</span></div>`).join('')}</div>
+      <div class="toolbar"><select id="icaFilter" style="max-width:320px"><option value="">All awards</option>${IC_AWARDS.map(a=>`<option${a===f?' selected':''}>${esc(a)}</option>`).join('')}</select></div>
+      ${list.length?list.map(r=>`
+        <div style="border-top:1px solid var(--line);padding:14px 0">
+          <div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap">
+            <div><b style="font-size:16px">${esc(r.company_name)}</b> <span class="muted">· ${esc(r.full_name)}</span><br>
+              <span style="color:var(--gold-soft)">${esc(r.award)}</span>
+              <span style="margin-left:8px">${payPill(r)}</span></div>
+            <div class="muted" style="font-size:13px;text-align:right">${esc(r.email)} · ${esc(r.phone)}<br>
+              ${r.instagram?`<a href="${esc(/^https?:/i.test(r.instagram)?r.instagram:'https://www.instagram.com/'+r.instagram.replace(/^@/,''))}" target="_blank" rel="noopener" style="color:var(--gold)">Instagram</a> · `:''}${r.created_at?new Date(r.created_at).toLocaleDateString('en-GB'):''}
+              ${r.payment_status!=='paid'?` <button class="btn ghost sm" data-icpaid="${esc(r.id)}" style="margin-left:6px">Mark paid</button>`:''}</div>
+          </div>
+          <p style="margin:8px 0 0;font-size:14px;line-height:1.55;white-space:pre-wrap">${esc(r.about||'')}</p>
+        </div>`).join(''):'<p class="muted">No entries yet.</p>'}
+    </div>`;
+    $('#icaBack').onclick=()=>renderAdmin();
+    $('#icaFilter').onchange=e=>{ f=e.target.value; paint(); };
+    app.querySelectorAll('[data-icpaid]').forEach(b=>b.onclick=async()=>{ b.disabled=true; await db.markIndustryCreativePaid(b.getAttribute('data-icpaid')); rows=await db.listIndustryCreatives(); paint(); });
+    $('#icaCsv').onclick=()=>{
+      const cols=['created_at','company_name','full_name','email','phone','instagram','award','about','entry_fee','payment_status'];
+      const q=v=>'"'+String(v==null?'':v).replace(/"/g,'""')+'"';
+      const csv=[cols.join(',')].concat(list.map(r=>cols.map(c=>q(r[c])).join(','))).join('\n');
+      const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download='industry-creative-entries.csv'; a.click();
+    };
+  };
+  paint();
+}
+
 function renderPayStep(name, price, payUrl, entryId, opts){
   opts=opts||{};
   const fee = fmtFee(price!=null ? price : ENTRY_FEE);
   const payBlock = payUrl
-    ? `<a class="btn" href="${payUrl}" target="_blank" rel="noopener" style="font-size:16px;padding:14px 26px">Pay £${fee} now to complete your entry</a>`
+    ? `<a class="btn" id="payNowBtn" href="${payUrl}" target="_blank" rel="noopener" style="font-size:16px;padding:14px 26px">Pay £${fee} now to complete your entry</a>`
     : `<span class="muted">Payment link unavailable. Please contact the organisers.</span>`;
   const extraNotes = (opts.discount ? `<p class="muted" style="margin:0 0 10px;font-size:13px">🎟️ ${esc(opts.discount.code)} applied: ${opts.discount.pct}% off.</p>` : '')
     + (opts.scholarship ? `<p class="muted" style="margin:0 0 10px;font-size:13px">🎓 Your entry is in for the Sam Stanley Creative Associates Scholarship <b>and</b> the Solo Award.</p>` : '');
@@ -723,6 +898,7 @@ function renderPayStep(name, price, payUrl, entryId, opts){
       ${voucherBlock}
     </div>
   </div>`;
+  if(entryId && $('#payNowBtn')) $('#payNowBtn').addEventListener('click',()=>{ db.markPayClicked(entryId); });
   if(entryId){
     const vInput=$('#voucherInput'), vBtn=$('#voucherApply'), vMsg=$('#voucherMsg');
     vBtn.onclick=async ()=>{
@@ -1244,7 +1420,7 @@ async function renderAdmin(){
     <div class="muted">Loading…</div></div>`;
   const rows=await db.results();
   // The results view doesn't carry the scholarship flag, so pick it up from the entries table.
-  try{ const flags={}; (await db.listEntries()).forEach(e=>{ if(e.scholarship) flags[e.id]=true; }); rows.forEach(r=>{ if(flags[r.id]) r.scholarship=true; }); }catch(e){}
+  try{ const flags={}, clicks={}; (await db.listEntries()).forEach(e=>{ if(e.scholarship) flags[e.id]=true; if(e.pay_clicked_at) clicks[e.id]=e.pay_clicked_at; }); rows.forEach(r=>{ if(flags[r.id]) r.scholarship=true; if(clicks[r.id]) r.pay_clicked_at=clicks[r.id]; }); }catch(e){}
   rows.sort((a,b)=> ((b.avg_total||0)-(a.avg_total||0)) || ((b.num_scores||0)-(a.num_scores||0)));
   const totalEntries=rows.length;
   const paidRows=rows.filter(r=>r.payment_status==='paid');
@@ -1257,14 +1433,17 @@ async function renderAdmin(){
   const scholarCount=rows.filter(r=>r.scholarship).length;
 
   app.innerHTML=`<div class="wrap">
-    <div class="section-title"><h2>Admin Results</h2>
-      <span style="display:flex;gap:14px;align-items:center">
-        <span class="muted">${totalEntries} entries · ${paid} paid · £${revenue} collected · £${outstanding} outstanding · ${scoutUsed}/8 scout passes · ${moveUsed} MOVEIT26 · ${move10Used} MOVEIT10 · ${scholarCount} 🎓 scholarship</span>
+    <div class="section-title" style="align-items:center;flex-wrap:wrap;gap:14px"><h2 style="white-space:nowrap">Admin Results</h2>
+      <span style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
         <button class="btn ghost sm" id="lbAdminBtn">🏆 Judges' top 8</button>
         <button class="btn ghost sm" id="indAdminBtn">🎖️ Industry Awards</button>
+        <button class="btn ghost sm" id="icAdminBtn">✍️ Industry Creative entries</button>
         <button class="btn ghost sm" id="noticeBoardBtn">📋 Notice board</button>
         <button class="btn ghost sm" id="manageJudges">Judges &amp; sections</button>
       </span></div>
+    <div class="admin-stats">
+      ${[[totalEntries,'entries'],[paid,'paid'],[rows.filter(r=>payState(r)==='awaiting').length,'awaiting payment'],[rows.filter(r=>payState(r)==='notpaid').length,"didn't pay"],['£'+revenue,'collected'],['£'+outstanding,'outstanding'],[scoutUsed+'/8','scout passes'],[moveUsed,'MOVEIT26'],[move10Used,'MOVEIT10'],[scholarCount,'🎓 scholarship']].map(([n,l])=>`<div class="admin-stat"><b>${n}</b><span>${l}</span></div>`).join('')}
+    </div>
     <div class="toolbar">
       <input id="search" placeholder="Search anything — name, school, email, age, style…">
       <button class="tab active" data-f="paid">Paid</button>
@@ -1306,7 +1485,7 @@ async function renderAdmin(){
     <table id="resTable">
       <thead><tr>
         <th>Dancer / group</th><th>Category</th><th>Style</th><th>DOB</th><th>Entered</th>
-        <th>Payment</th><th>Avg score</th><th>Judges</th><th>Perform</th><th></th>
+        <th>Payment</th><th>Unpaid status</th><th>Avg score</th><th>Judges</th><th>Perform</th><th></th>
       </tr></thead>
       <tbody></tbody>
     </table></div>
@@ -1348,12 +1527,13 @@ async function renderAdmin(){
         <td><b>${esc(r.dancer_name)}</b>${r.scout_pass_judge_id?` <span title="Scout pass from ${esc(r.scout_pass_judge_name||'')}" style="color:var(--gold);font-size:12px;white-space:nowrap">⭐ Scout pass</span>`:''}${r.selected_to_perform?` <span style="color:#7fe6c4;font-size:12px;white-space:nowrap">🎭 Selected</span>`:''}${r.voucher_code?` <span title="Voucher used" style="color:#9fd4ff;font-size:12px;white-space:nowrap">🎟️ ${esc(r.voucher_code)}</span>`:''}${r.scholarship?` <span title="Sam Stanley Creative Associates Scholarship entry" style="color:var(--gold-soft);font-size:12px;white-space:nowrap">🎓 Scholarship</span>`:''}<br><span class="muted" style="font-size:12px">${esc(r.school_name||'')}</span></td>
         <td>${esc(r.category||'')}</td><td>${esc(r.dance_style||'')}</td><td>${dob}</td><td style="white-space:nowrap">${entered}</td>
         <td><span class="pill ${r.payment_status}">${r.payment_status}</span></td>
+        <td>${r.payment_status==='paid'?'<span class="muted">-</span>':payPill(r)}</td>
         <td>${avg!=null?`<b style="color:var(--gold)">${avg}</b>/100<div class="bar" style="margin-top:5px"><i style="width:${pct}%"></i></div>`:'<span class="muted">Not scored</span>'}</td>
         <td class="tally">${r.num_scores||0}</td>
         <td style="white-space:nowrap">${(r.votes_perform||0)?`<span title="Perform at show">🎭 ${r.votes_perform}</span>`:'<span class="muted">-</span>'}</td>
         <td style="white-space:nowrap"><button class="btn ghost sm" data-view="${r.id}">View</button>${r.payment_status==='unpaid'?` <button class="btn ghost sm" data-paid="${r.id}">Mark paid</button>`:''}</td>
       </tr>`;
-    }).join('') || `<tr><td colspan="10" class="muted">No matching entries.</td></tr>`;
+    }).join('') || `<tr><td colspan="11" class="muted">No matching entries.</td></tr>`;
     tb.querySelectorAll('[data-paid]').forEach(b=>b.onclick=async()=>{await db.markPaid(b.getAttribute('data-paid'));renderAdmin();});
     tb.querySelectorAll('[data-view]').forEach(b=>b.onclick=()=>renderAdminEntry(rows.find(x=>x.id===b.getAttribute('data-view'))));
   }
@@ -1385,6 +1565,7 @@ async function renderAdmin(){
   $('#noticeBoardBtn').onclick=()=>renderNoticeBoard();
   $('#lbAdminBtn').onclick=()=>renderAdminLeaderboards();
   $('#indAdminBtn').onclick=()=>renderIndustryAdmin();
+  $('#icAdminBtn').onclick=()=>renderIndustryCreativesAdmin();
   paint();
 }
 
